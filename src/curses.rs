@@ -1,7 +1,12 @@
 use std::cell::RefCell;
 
+use crate::game::Game;
 use crate::object::Object;
-use crate::pancurses::{Input, Window};
+use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
+use pancurses::{Input, Window};
+
+pub const WINDOW_WIDTH: i32 = 100;
+pub const WINDOW_HEIGHT: i32 = 40;
 
 /// Handles drawing. Expects player to be the first in the vector.
 pub struct Graphics {
@@ -12,8 +17,6 @@ pub struct Graphics {
 impl Graphics {
     pub fn new() -> Self {
         let window = pancurses::initscr();
-        let window_x = window.get_max_x() - 1;
-        let window_y = window.get_max_y() - 1;
 
         window.keypad(true);
         pancurses::curs_set(0);
@@ -25,13 +28,22 @@ impl Graphics {
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&self, map: &Map) {
         self.window.clear();
 
         self.draw_borders();
 
         for obj in &*self.objects.borrow() {
             obj.draw(&self.window);
+        }
+
+        for y in 0..MAP_HEIGHT {
+            for x in 0..MAP_WIDTH {
+                let wall = map[x as usize][y as usize].block_sight;
+                if wall {
+                    self.window.mvaddch(y, x, '+');
+                }
+            }
         }
 
         self.window.refresh();
@@ -42,34 +54,31 @@ impl Graphics {
     }
 
     fn draw_borders(&self) {
-        let max_x = self.window.get_max_x() - 1;
-        let max_y = self.window.get_max_y() - 1;
-
-        for i in 0..max_x {
+        for i in 0..WINDOW_WIDTH {
             self.window.mvaddch(0, i, '-');
-            self.window.mvaddch(max_y, i, '-');
+            self.window.mvaddch(WINDOW_HEIGHT, i, '-');
         }
 
-        for i in 0..max_y {
+        for i in 0..WINDOW_HEIGHT {
             self.window.mvaddch(i, 0, '|');
-            self.window.mvaddch(i, max_x, '|');
+            self.window.mvaddch(i, WINDOW_WIDTH, '|');
         }
 
         self.window.mvaddch(0, 0, '+');
-        self.window.mvaddch(max_y, 0, '+');
-        self.window.mvaddch(0, max_x, '+');
-        self.window.mvaddch(max_y, max_x, '+');
+        self.window.mvaddch(WINDOW_HEIGHT, 0, '+');
+        self.window.mvaddch(0, WINDOW_WIDTH, '+');
+        self.window.mvaddch(WINDOW_HEIGHT, WINDOW_WIDTH, '+');
     }
 
-    pub fn handle_keys(&self, player: &mut Object) -> bool {
+    pub fn handle_keys(&self, player: &mut Object, game: &Game) -> bool {
         match self.window.getch() {
             Some(Input::KeyDC) | Some(Input::Character('q')) => return true, // exit game
 
             // movement keys
-            Some(Input::KeyUp) => player.move_by(0, -1),
-            Some(Input::KeyDown) => player.move_by(0, 1),
-            Some(Input::KeyLeft) => player.move_by(-1, 0),
-            Some(Input::KeyRight) => player.move_by(1, 0),
+            Some(Input::KeyUp) => player.move_by(0, -1, game),
+            Some(Input::KeyDown) => player.move_by(0, 1, game),
+            Some(Input::KeyLeft) => player.move_by(-1, 0, game),
+            Some(Input::KeyRight) => player.move_by(1, 0, game),
 
             Some(_) | None => (),
         }

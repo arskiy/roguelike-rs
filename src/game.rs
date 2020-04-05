@@ -1,24 +1,47 @@
-use crate::curses::Graphics;
+use crate::curses::{Graphics, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::object::Object;
+use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
 
-pub fn start() {
-    let mut graphics = Graphics::new();
+pub struct Game {
+    pub map: Map,
+}
 
-    let window_x = graphics.window.get_max_x();
-    let window_y = graphics.window.get_max_y();
+impl Game {
+    pub fn new() -> Self {
+        Self {
+            map: vec![vec![Tile::empty(); MAP_HEIGHT as usize]; MAP_WIDTH as usize],
+        }
+    }
 
-    let player = Object::new(window_x / 2, window_y / 2, '@', pancurses::COLOR_WHITE);
-    graphics.push_obj(player);
+    pub fn start(&mut self) {
+        let mut graphics = Graphics::new();
 
-    let npc = Object::new(window_x / 2, window_y / 2 - 5, '@', pancurses::COLOR_YELLOW);
-    graphics.push_obj(npc);
+        let player = Object::new(
+            WINDOW_WIDTH / 2,
+            WINDOW_HEIGHT / 2,
+            '@',
+            pancurses::COLOR_WHITE,
+        );
+        graphics.push_obj(player);
 
-    loop {
-        graphics.draw();
+        let npc = Object::new(
+            WINDOW_WIDTH / 2,
+            WINDOW_HEIGHT / 2 - 5,
+            '@',
+            pancurses::COLOR_YELLOW,
+        );
+        graphics.push_obj(npc);
 
-        let exit = graphics.handle_keys(&mut graphics.objects.borrow_mut()[0]);
-        if exit {
-            break;
+        self.map[30][22] = Tile::wall();
+        self.map[50][22] = Tile::wall();
+
+        loop {
+            graphics.draw(&self.map);
+
+            let exit = graphics.handle_keys(&mut graphics.objects.borrow_mut()[0], self);
+            if exit {
+                break;
+            }
         }
     }
 }
