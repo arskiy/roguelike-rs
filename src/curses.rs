@@ -7,8 +7,10 @@ use pancurses::Window;
 pub const WINDOW_WIDTH: i32 = 99;
 pub const WINDOW_HEIGHT: i32 = 40;
 
-pub const STATUS_Y: i32 = 30;
-pub const STATUS_HEIGHT: i32 = 10;
+pub const STATUS_Y: i32 = 32;
+pub const STATUS_HEIGHT: i32 = WINDOW_HEIGHT - STATUS_Y;
+
+pub const PLAYER_STATS_X: i32 = WINDOW_WIDTH / 2 + 1;
 
 pub const PLAYER: usize = 0;
 
@@ -49,6 +51,10 @@ impl Graphics {
                 }
             }
         }
+        self.window.mvaddstr(STATUS_Y - 2, 1, "Message log:");
+        for y in (STATUS_Y - 2)..WINDOW_HEIGHT {
+            self.window.mvaddch(y, WINDOW_WIDTH / 2, '|');
+        }
 
         for (i, status) in self.statuses.iter_mut().enumerate() {
             self.window
@@ -64,6 +70,41 @@ impl Graphics {
             .collect();
 
         self.window.refresh();
+    }
+
+    pub fn draw_player_stats(&self, player: &Object) {
+        if player.alive {
+            let hp = player.fighter.unwrap().hp;
+            if hp < 10 {
+                self.window.color_set(pancurses::COLOR_RED);
+            } else {
+                self.window.color_set(pancurses::COLOR_GREEN);
+            }
+            self.window.mvaddstr(
+                STATUS_Y - 2,
+                PLAYER_STATS_X,
+                format!(
+                    "HP: {}/{}",
+                    player.fighter.unwrap().hp,
+                    player.fighter.unwrap().max_hp
+                ),
+            );
+            self.window.color_set(pancurses::COLOR_YELLOW);
+            self.window.mvaddstr(
+                STATUS_Y - 1,
+                PLAYER_STATS_X,
+                format!("Defence: {}", player.fighter.unwrap().defence),
+            );
+
+            self.window.color_set(pancurses::COLOR_CYAN);
+            self.window.mvaddstr(
+                STATUS_Y,
+                PLAYER_STATS_X,
+                format!("Power: {}", player.fighter.unwrap().power),
+            );
+
+            self.window.color_set(pancurses::COLOR_WHITE);
+        }
     }
 
     pub fn push_obj(&mut self, obj: Object) {

@@ -1,5 +1,5 @@
 use crate::map_gen::Rect;
-use crate::object::Object;
+use crate::object::{Fighter, Object, AI};
 
 use rand::Rng;
 
@@ -14,14 +14,28 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>) {
         let y = rand::thread_rng().gen_range(room.y1 + 1, room.y2);
 
         let mut monster = if rand::random::<f32>() < 0.8 {
-            // 80% chance of getting an orc
-            // create an orc
-            Object::new(x, y, 'o', pancurses::COLOR_GREEN, false, "prc", true)
+            let mut orc = Object::new(x, y, 'o', pancurses::COLOR_GREEN, false, "orc", true);
+            orc.fighter = Some(Fighter {
+                max_hp: 10,
+                hp: 10,
+                defence: 0,
+                power: 3,
+            });
+            orc.ai = Some(AI::Basic);
+            orc
         } else {
-            Object::new(x, y, 'T', pancurses::COLOR_YELLOW, false, "troll", true)
+            let mut troll = Object::new(x, y, 'T', pancurses::COLOR_YELLOW, false, "troll", true);
+            troll.fighter = Some(Fighter {
+                max_hp: 16,
+                hp: 16,
+                defence: 1,
+                power: 4,
+            });
+            troll.ai = Some(AI::Basic);
+            troll
         };
 
-        monster.alive = false;
+        monster.alive = true;
 
         objects.push(monster);
     }

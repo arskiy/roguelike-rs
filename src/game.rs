@@ -1,5 +1,6 @@
+use crate::ai;
 use crate::curses::{Graphics, Status, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
-use crate::object::{move_by, Object};
+use crate::object::{move_by, Fighter, Object};
 use crate::tile;
 use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
 use pancurses::Input;
@@ -23,6 +24,13 @@ impl Game {
 
         player.alive = true;
 
+        player.fighter = Some(Fighter {
+            max_hp: 30,
+            hp: 30,
+            defence: 2,
+            power: 5,
+        });
+
         self.graphics.push_obj(player);
 
         // procedurally generate the map
@@ -30,6 +38,8 @@ impl Game {
 
         loop {
             self.graphics.draw(&self.map);
+            self.graphics
+                .draw_player_stats(&self.graphics.objects.borrow()[PLAYER]);
 
             let player_action = self.handle_keys();
 
@@ -44,9 +54,18 @@ impl Game {
                     // only if object is not player
                     if (object as *const _) != (&self.graphics.objects.borrow()[PLAYER] as *const _)
                     {
+                        /*
                         self.graphics
                             .statuses
                             .push(Status::new(format!("The {} growls!", object.name), 1));
+                        */
+                    }
+                }
+
+                let m = self.graphics.objects.borrow().len();
+                for id in 0..m {
+                    if self.graphics.objects.borrow()[id].ai.is_some() {
+                        // ai::take_turn(id, self);
                     }
                 }
             }
