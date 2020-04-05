@@ -1,12 +1,14 @@
 use std::cell::RefCell;
 
 use crate::game::Game;
-use crate::object::Object;
+use crate::object::{move_by, Object};
 use crate::tile::{Map, MAP_HEIGHT, MAP_WIDTH};
 use pancurses::{Input, Window};
 
 pub const WINDOW_WIDTH: i32 = 99;
 pub const WINDOW_HEIGHT: i32 = 40;
+
+const PLAYER: usize = 0;
 
 /// Handles drawing. Expects player to be the first in the vector.
 pub struct Graphics {
@@ -81,15 +83,15 @@ impl Graphics {
         self.window.mvaddch(WINDOW_HEIGHT, WINDOW_WIDTH, '+');
     }
 
-    pub fn handle_keys(&self, player: &mut Object, game: &Game, objects: &Vec<Object>) -> bool {
+    pub fn handle_keys(&self, game: &Game, objects: &mut Vec<Object>) -> bool {
         match self.window.getch() {
             Some(Input::KeyDC) | Some(Input::Character('q')) => return true, // exit game
 
             // movement keys
-            Some(Input::KeyUp) => player.move_by(0, -1, game, objects),
-            Some(Input::KeyDown) => player.move_by(0, 1, game, objects),
-            Some(Input::KeyLeft) => player.move_by(-1, 0, game, objects),
-            Some(Input::KeyRight) => player.move_by(1, 0, game, objects),
+            Some(Input::KeyUp) => move_by(PLAYER, 0, -1, &game.map, objects),
+            Some(Input::KeyDown) => move_by(PLAYER, 0, 1, &game.map, objects),
+            Some(Input::KeyLeft) => move_by(PLAYER, -1, 0, &game.map, objects),
+            Some(Input::KeyRight) => move_by(PLAYER, 1, 0, &game.map, objects),
 
             Some(_) | None => (),
         }

@@ -1,7 +1,8 @@
 use crate::game::Game;
-use crate::tile::is_blocked;
+use crate::tile::{is_blocked, Map};
 use pancurses::A_BOLD;
 
+#[derive(Clone)]
 pub struct Object {
     pub x: i32,
     pub y: i32,
@@ -35,15 +36,6 @@ impl Object {
         }
     }
 
-    pub fn move_by(&mut self, dx: i32, dy: i32, game: &Game, objects: &Vec<Object>) {
-        if !game.map[(self.x + dx) as usize][(self.y + dy) as usize].blocked
-            && !is_blocked(self.x + dx, self.y + dy, &game.map, objects)
-        {
-            self.x += dx;
-            self.y += dy;
-        }
-    }
-
     pub fn draw(&self, win: &pancurses::Window) {
         win.color_set(self.color);
         if self.is_bold {
@@ -65,5 +57,12 @@ impl Object {
     pub fn set_pos(&mut self, x: i32, y: i32) {
         self.x = x;
         self.y = y;
+    }
+}
+
+pub fn move_by(id: usize, dx: i32, dy: i32, map: &Map, objects: &mut Vec<Object>) {
+    let (x, y) = objects[id].pos();
+    if !is_blocked(x + dx, y + dy, map, objects) {
+        objects[id].set_pos(x + dx, y + dy);
     }
 }

@@ -37,11 +37,7 @@ impl Game {
         loop {
             graphics.draw(&self.map);
 
-            let exit = graphics.handle_keys(
-                &mut graphics.objects.borrow_mut()[0],
-                self,
-                &graphics.objects.borrow(),
-            );
+            let exit = graphics.handle_keys(self, &mut graphics.objects.borrow_mut());
             if exit {
                 break;
             }
