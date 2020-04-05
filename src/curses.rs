@@ -1,10 +1,8 @@
 use std::cell::RefCell;
 
-use crate::game;
-use crate::game::{Game, PlayerAction};
 use crate::object::Object;
 use crate::tile::{Map, MAP_HEIGHT, MAP_WIDTH};
-use pancurses::{Input, Window};
+use pancurses::Window;
 
 pub const WINDOW_WIDTH: i32 = 99;
 pub const WINDOW_HEIGHT: i32 = 40;
@@ -34,31 +32,6 @@ impl Status {
 }
 
 impl Graphics {
-    pub fn new() -> Self {
-        let window = pancurses::initscr();
-
-        window.keypad(true);
-        pancurses::curs_set(0);
-        pancurses::noecho();
-        pancurses::start_color();
-
-        pancurses::init_pair(1, pancurses::COLOR_RED, pancurses::COLOR_BLACK);
-        pancurses::init_pair(2, pancurses::COLOR_GREEN, pancurses::COLOR_BLACK);
-        pancurses::init_pair(3, pancurses::COLOR_YELLOW, pancurses::COLOR_BLACK);
-        pancurses::init_pair(4, pancurses::COLOR_BLUE, pancurses::COLOR_BLACK);
-        pancurses::init_pair(5, pancurses::COLOR_MAGENTA, pancurses::COLOR_BLACK);
-        pancurses::init_pair(6, pancurses::COLOR_CYAN, pancurses::COLOR_BLACK);
-        pancurses::init_pair(7, pancurses::COLOR_WHITE, pancurses::COLOR_BLACK);
-
-        window.color_set(7);
-
-        Self {
-            objects: RefCell::new(Vec::new()),
-            window,
-            statuses: Vec::new(),
-        }
-    }
-
     pub fn draw(&mut self, map: &Map) {
         self.window.clear();
 
@@ -87,7 +60,7 @@ impl Graphics {
             .statuses
             .clone()
             .into_iter()
-            .filter(|status| if status.rounds != 0 { true } else { false })
+            .filter(|status| status.rounds != 0)
             .collect();
 
         self.window.refresh();
@@ -113,33 +86,31 @@ impl Graphics {
         self.window.mvaddch(0, WINDOW_WIDTH, '+');
         self.window.mvaddch(WINDOW_HEIGHT, WINDOW_WIDTH, '+');
     }
+}
 
-    pub fn handle_keys(&self, game: &mut Game) -> PlayerAction {
-        let is_alive = game.graphics.objects.borrow()[PLAYER].alive;
-        match (self.window.getch(), is_alive) {
-            (Some(Input::KeyDC), _) | (Some(Input::Character('q')), _) => {
-                return PlayerAction::Exit
-            } // exit game
+impl Default for Graphics {
+    fn default() -> Self {
+        let window = pancurses::initscr();
 
-            // movement keys
-            (Some(Input::KeyUp), true) => {
-                game::player_move_or_attack(0, -1, game, &mut game.graphics.objects.borrow_mut());
-                PlayerAction::TookTurn
-            }
-            (Some(Input::KeyDown), true) => {
-                game::player_move_or_attack(0, 1, game, &mut game.graphics.objects.borrow_mut());
-                PlayerAction::TookTurn
-            }
-            (Some(Input::KeyLeft), true) => {
-                game::player_move_or_attack(-1, 0, game, &mut game.graphics.objects.borrow_mut());
-                PlayerAction::TookTurn
-            }
-            (Some(Input::KeyRight), true) => {
-                game::player_move_or_attack(1, 0, game, &mut game.graphics.objects.borrow_mut());
-                PlayerAction::TookTurn
-            }
+        window.keypad(true);
+        pancurses::curs_set(0);
+        pancurses::noecho();
+        pancurses::start_color();
 
-            (Some(_), _) | (None, _) => PlayerAction::DidntTakeTurn,
+        pancurses::init_pair(1, pancurses::COLOR_RED, pancurses::COLOR_BLACK);
+        pancurses::init_pair(2, pancurses::COLOR_GREEN, pancurses::COLOR_BLACK);
+        pancurses::init_pair(3, pancurses::COLOR_YELLOW, pancurses::COLOR_BLACK);
+        pancurses::init_pair(4, pancurses::COLOR_BLUE, pancurses::COLOR_BLACK);
+        pancurses::init_pair(5, pancurses::COLOR_MAGENTA, pancurses::COLOR_BLACK);
+        pancurses::init_pair(6, pancurses::COLOR_CYAN, pancurses::COLOR_BLACK);
+        pancurses::init_pair(7, pancurses::COLOR_WHITE, pancurses::COLOR_BLACK);
+
+        window.color_set(7);
+
+        Self {
+            objects: RefCell::new(Vec::new()),
+            window,
+            statuses: Vec::new(),
         }
     }
 }

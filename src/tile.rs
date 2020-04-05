@@ -82,7 +82,7 @@ pub fn make_map(objects: &mut Vec<Object>) -> Map {
     map
 }
 
-pub fn is_blocked(x: i32, y: i32, map: &Map, objects: &Vec<Object>) -> bool {
+pub fn is_blocked(x: i32, y: i32, map: &Map, objects: &[Object]) -> bool {
     // first test the map tile
     if map[x as usize][y as usize].blocked {
         return true;

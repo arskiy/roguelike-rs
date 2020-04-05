@@ -1,9 +1,8 @@
-use crate::curses::{
-    Graphics, Status, PLAYER, STATUS_HEIGHT, STATUS_Y, WINDOW_HEIGHT, WINDOW_WIDTH,
-};
+use crate::curses::{Graphics, Status, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::object::{move_by, Object};
 use crate::tile;
 use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
+use pancurses::Input;
 
 pub struct Game {
     pub map: Map,
@@ -11,13 +10,6 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new() -> Self {
-        Self {
-            map: vec![vec![Tile::empty(); MAP_HEIGHT as usize]; MAP_WIDTH as usize],
-            graphics: Graphics::new(),
-        }
-    }
-
     pub fn start(&mut self) {
         let mut player = Object::new(
             WINDOW_WIDTH / 2,
@@ -39,7 +31,7 @@ impl Game {
         loop {
             self.graphics.draw(&self.map);
 
-            let player_action = self.graphics.handle_keys(self);
+            let player_action = self.handle_keys();
 
             if let PlayerAction::Exit = player_action {
                 break;
@@ -60,6 +52,78 @@ impl Game {
             }
         }
     }
+
+    pub fn handle_keys(&mut self) -> PlayerAction {
+        let is_alive = self.graphics.objects.borrow()[PLAYER].alive;
+        match (self.graphics.window.getch(), is_alive) {
+            (Some(Input::KeyDC), _) | (Some(Input::Character('q')), _) => PlayerAction::Exit, // exit game
+
+            // movement keys
+            (Some(Input::KeyUp), true) => {
+                self.player_move_or_attack(0, -1);
+                PlayerAction::TookTurn
+            }
+            (Some(Input::KeyDown), true) => {
+                self.player_move_or_attack(0, 1);
+                PlayerAction::TookTurn
+            }
+            (Some(Input::KeyLeft), true) => {
+                self.player_move_or_attack(-1, 0);
+                PlayerAction::TookTurn
+            }
+            (Some(Input::KeyRight), true) => {
+                self.player_move_or_attack(1, 0);
+                PlayerAction::TookTurn
+            }
+
+            (Some(_), _) | (None, _) => PlayerAction::DidntTakeTurn,
+        }
+    }
+
+    pub fn player_move_or_attack(&mut self, dx: i32, dy: i32) {
+        // the coordinates the player is moving to/attacking
+        let x = self.graphics.objects.borrow()[PLAYER].x + dx;
+        let y = self.graphics.objects.borrow()[PLAYER].y + dy;
+
+        // try to find an attackable object there
+        let target_id = self
+            .graphics
+            .objects
+            .borrow_mut()
+            .iter()
+            .position(|object| object.pos() == (x, y));
+
+        // attack if target found, move otherwise
+        match target_id {
+            Some(target_id) => {
+                self.graphics.statuses.push(Status::new(
+                    format!(
+                        "The {} laughs at your pathetic attempt!",
+                        self.graphics.objects.borrow()[target_id].name
+                    ),
+                    1,
+                ));
+            }
+            None => {
+                move_by(
+                    PLAYER,
+                    dx,
+                    dy,
+                    &self.map,
+                    &mut self.graphics.objects.borrow_mut(),
+                );
+            }
+        }
+    }
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        Self {
+            map: vec![vec![Tile::empty(); MAP_HEIGHT as usize]; MAP_WIDTH as usize],
+            graphics: Graphics::default(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -67,29 +131,4 @@ pub enum PlayerAction {
     TookTurn,
     DidntTakeTurn,
     Exit,
-}
-
-pub fn player_move_or_attack(dx: i32, dy: i32, game: &mut Game, objects: &mut Vec<Object>) {
-    // the coordinates the player is moving to/attacking
-    let x = objects[PLAYER].x + dx;
-    let y = objects[PLAYER].y + dy;
-
-    // try to find an attackable object there
-    let target_id = objects.iter().position(|object| object.pos() == (x, y));
-
-    // attack if target found, move otherwise
-    match target_id {
-        Some(target_id) => {
-            game.graphics.statuses.push(Status::new(
-                format!(
-                    "The {} laughs at your pathetic attempt!",
-                    objects[target_id].name
-                ),
-                1,
-            ));
-        }
-        None => {
-            move_by(PLAYER, dx, dy, &game.map, objects);
-        }
-    }
 }

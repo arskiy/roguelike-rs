@@ -1,3 +1,5 @@
+#![allow(clippy::ptr_arg)]
+
 extern crate pancurses;
 extern crate rand;
 
