@@ -1,19 +1,36 @@
 use std::cell::RefCell;
 
-use crate::game::Game;
-use crate::object::{move_by, Object};
+use crate::game;
+use crate::game::{Game, PlayerAction};
+use crate::object::Object;
 use crate::tile::{Map, MAP_HEIGHT, MAP_WIDTH};
 use pancurses::{Input, Window};
 
 pub const WINDOW_WIDTH: i32 = 99;
 pub const WINDOW_HEIGHT: i32 = 40;
 
-const PLAYER: usize = 0;
+pub const STATUS_Y: i32 = 30;
+pub const STATUS_HEIGHT: i32 = 10;
+
+pub const PLAYER: usize = 0;
 
 /// Handles drawing. Expects player to be the first in the vector.
 pub struct Graphics {
     pub objects: RefCell<Vec<Object>>,
     pub window: Window,
+    pub statuses: Vec<Status>,
+}
+
+#[derive(Clone)]
+pub struct Status {
+    msg: String,
+    rounds: u32,
+}
+
+impl Status {
+    pub fn new(msg: String, rounds: u32) -> Self {
+        Self { msg, rounds }
+    }
 }
 
 impl Graphics {
@@ -38,10 +55,11 @@ impl Graphics {
         Self {
             objects: RefCell::new(Vec::new()),
             window,
+            statuses: Vec::new(),
         }
     }
 
-    pub fn draw(&self, map: &Map) {
+    pub fn draw(&mut self, map: &Map) {
         self.window.clear();
 
         self.draw_borders();
@@ -58,6 +76,19 @@ impl Graphics {
                 }
             }
         }
+
+        for (i, status) in self.statuses.iter_mut().enumerate() {
+            self.window
+                .mvaddstr(STATUS_Y + i as i32, 1, status.msg.clone());
+            status.rounds -= 1;
+        }
+
+        self.statuses = self
+            .statuses
+            .clone()
+            .into_iter()
+            .filter(|status| if status.rounds != 0 { true } else { false })
+            .collect();
 
         self.window.refresh();
     }
@@ -83,20 +114,33 @@ impl Graphics {
         self.window.mvaddch(WINDOW_HEIGHT, WINDOW_WIDTH, '+');
     }
 
-    pub fn handle_keys(&self, game: &Game, objects: &mut Vec<Object>) -> bool {
-        match self.window.getch() {
-            Some(Input::KeyDC) | Some(Input::Character('q')) => return true, // exit game
+    pub fn handle_keys(&self, game: &mut Game) -> PlayerAction {
+        let is_alive = game.graphics.objects.borrow()[PLAYER].alive;
+        match (self.window.getch(), is_alive) {
+            (Some(Input::KeyDC), _) | (Some(Input::Character('q')), _) => {
+                return PlayerAction::Exit
+            } // exit game
 
             // movement keys
-            Some(Input::KeyUp) => move_by(PLAYER, 0, -1, &game.map, objects),
-            Some(Input::KeyDown) => move_by(PLAYER, 0, 1, &game.map, objects),
-            Some(Input::KeyLeft) => move_by(PLAYER, -1, 0, &game.map, objects),
-            Some(Input::KeyRight) => move_by(PLAYER, 1, 0, &game.map, objects),
+            (Some(Input::KeyUp), true) => {
+                game::player_move_or_attack(0, -1, game, &mut game.graphics.objects.borrow_mut());
+                PlayerAction::TookTurn
+            }
+            (Some(Input::KeyDown), true) => {
+                game::player_move_or_attack(0, 1, game, &mut game.graphics.objects.borrow_mut());
+                PlayerAction::TookTurn
+            }
+            (Some(Input::KeyLeft), true) => {
+                game::player_move_or_attack(-1, 0, game, &mut game.graphics.objects.borrow_mut());
+                PlayerAction::TookTurn
+            }
+            (Some(Input::KeyRight), true) => {
+                game::player_move_or_attack(1, 0, game, &mut game.graphics.objects.borrow_mut());
+                PlayerAction::TookTurn
+            }
 
-            Some(_) | None => (),
+            (Some(_), _) | (None, _) => PlayerAction::DidntTakeTurn,
         }
-
-        false
     }
 }
 

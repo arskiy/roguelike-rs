@@ -1,4 +1,3 @@
-use crate::game::Game;
 use crate::tile::{is_blocked, Map};
 use pancurses::A_BOLD;
 
