@@ -2,6 +2,7 @@ use crate::curses::{Status, PLAYER};
 use crate::game::Game;
 use crate::object;
 use crate::object::Object;
+use std::cmp;
 
 pub fn take_turn(monster_id: usize, game: &mut Game) {
     // only move if close
@@ -28,10 +29,20 @@ pub fn take_turn(monster_id: usize, game: &mut Game) {
             .map_or(false, |f| f.hp > 0)
         {
             // close enough, attack! (if the player is still alive.)
-            let monster = &game.graphics.objects.borrow()[monster_id];
-            game.graphics
-                .statuses
-                .push(Status::new(format!("{} attacks you!", monster.name), 1));
+            let (mut monster, mut player) =
+                mut_two(monster_id, PLAYER, &mut game.graphics.objects.borrow_mut());
+            monster.attack(&mut player, &mut game.graphics);
         }
+    }
+}
+
+pub fn mut_two<T: Clone>(first_index: usize, second_index: usize, items: &mut [T]) -> (T, T) {
+    assert!(first_index != second_index);
+    let split_at_index = cmp::max(first_index, second_index);
+    let (first_slice, second_slice) = items.split_at_mut(split_at_index);
+    if first_index < second_index {
+        (first_slice[first_index].clone(), second_slice[0].clone())
+    } else {
+        (second_slice[0].clone(), first_slice[second_index].clone())
     }
 }

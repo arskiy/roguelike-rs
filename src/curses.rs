@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use crate::object::Object;
 use crate::tile::{Map, MAP_HEIGHT, MAP_WIDTH};
-use pancurses::Window;
+use pancurses::{Window, A_BOLD};
 
 pub const WINDOW_WIDTH: i32 = 99;
 pub const WINDOW_HEIGHT: i32 = 40;
@@ -72,6 +72,10 @@ impl Graphics {
         self.window.refresh();
     }
 
+    pub fn add_status(&mut self, msg: String, rounds: u32) {
+        self.statuses.push(Status::new(msg.into(), rounds));
+    }
+
     pub fn draw_player_stats(&self, player: &Object) {
         if player.alive {
             let hp = player.fighter.unwrap().hp;
@@ -103,6 +107,13 @@ impl Graphics {
                 format!("Power: {}", player.fighter.unwrap().power),
             );
 
+            self.window.color_set(pancurses::COLOR_WHITE);
+        } else {
+            self.window.color_set(pancurses::COLOR_RED);
+            self.window.attron(A_BOLD);
+            self.window
+                .mvaddstr(STATUS_Y - 2, PLAYER_STATS_X, "You're dead!");
+            self.window.attroff(A_BOLD);
             self.window.color_set(pancurses::COLOR_WHITE);
         }
     }

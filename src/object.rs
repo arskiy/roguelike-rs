@@ -1,3 +1,5 @@
+use crate::curses::Graphics;
+use crate::game::Game;
 use crate::tile::{is_blocked, Map};
 use pancurses::A_BOLD;
 
@@ -80,6 +82,33 @@ impl Object {
         let dx = other.x - self.x;
         let dy = other.y - self.y;
         ((dx.pow(2) + dy.pow(2)) as f32).sqrt()
+    }
+
+    pub fn take_damage(&mut self, damage: i32) {
+        // apply damage if possible
+        if let Some(fighter) = self.fighter.as_mut() {
+            if damage > 0 {
+                fighter.hp -= damage;
+            }
+        }
+    }
+
+    pub fn attack(&mut self, target: &mut Object, gfx: &mut Graphics) {
+        // a simple formula for attack damage
+        let damage = self.fighter.map_or(0, |f| f.power) - target.fighter.map_or(0, |f| f.defence);
+        if damage > 0 {
+            // make the target take some damage
+            gfx.add_status(
+                format!("{} attacks {} for {} hp.", self.name, target.name, damage),
+                1,
+            );
+            target.take_damage(damage);
+        } else {
+            gfx.add_status(
+                format!("{} attacks {}, but has no effect.", self.name, target.name),
+                1,
+            )
+        }
     }
 }
 

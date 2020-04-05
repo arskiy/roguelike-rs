@@ -115,13 +115,9 @@ impl Game {
         // attack if target found, move otherwise
         match target_id {
             Some(target_id) => {
-                self.graphics.statuses.push(Status::new(
-                    format!(
-                        "The {} laughs at your pathetic attempt!",
-                        self.graphics.objects.borrow()[target_id].name
-                    ),
-                    1,
-                ));
+                let (mut player, mut target) =
+                    ai::mut_two(PLAYER, target_id, &mut self.graphics.objects.borrow_mut());
+                player.attack(&mut target, &mut self.graphics);
             }
             None => {
                 move_by(
