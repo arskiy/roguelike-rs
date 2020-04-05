@@ -1,5 +1,6 @@
 use crate::curses::{Graphics, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::object::Object;
+use crate::tile;
 use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
 
 pub struct Game {
@@ -16,29 +17,31 @@ impl Game {
     pub fn start(&mut self) {
         let mut graphics = Graphics::new();
 
-        let player = Object::new(
+        let mut player = Object::new(
             WINDOW_WIDTH / 2,
             WINDOW_HEIGHT / 2,
             '@',
             pancurses::COLOR_WHITE,
+            true,
+            "player",
+            true,
         );
+
+        player.alive = true;
+
         graphics.push_obj(player);
 
-        let npc = Object::new(
-            WINDOW_WIDTH / 2,
-            WINDOW_HEIGHT / 2 - 5,
-            '@',
-            pancurses::COLOR_YELLOW,
-        );
-        graphics.push_obj(npc);
-
-        self.map[30][22] = Tile::wall();
-        self.map[50][22] = Tile::wall();
+        // procedurally generate the map
+        self.map = tile::make_map(&mut graphics.objects.borrow_mut());
 
         loop {
             graphics.draw(&self.map);
 
-            let exit = graphics.handle_keys(&mut graphics.objects.borrow_mut()[0], self);
+            let exit = graphics.handle_keys(
+                &mut graphics.objects.borrow_mut()[0],
+                self,
+                &graphics.objects.borrow(),
+            );
             if exit {
                 break;
             }

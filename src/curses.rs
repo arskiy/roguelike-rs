@@ -2,10 +2,10 @@ use std::cell::RefCell;
 
 use crate::game::Game;
 use crate::object::Object;
-use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
+use crate::tile::{Map, MAP_HEIGHT, MAP_WIDTH};
 use pancurses::{Input, Window};
 
-pub const WINDOW_WIDTH: i32 = 100;
+pub const WINDOW_WIDTH: i32 = 99;
 pub const WINDOW_HEIGHT: i32 = 40;
 
 /// Handles drawing. Expects player to be the first in the vector.
@@ -21,6 +21,17 @@ impl Graphics {
         window.keypad(true);
         pancurses::curs_set(0);
         pancurses::noecho();
+        pancurses::start_color();
+
+        pancurses::init_pair(1, pancurses::COLOR_RED, pancurses::COLOR_BLACK);
+        pancurses::init_pair(2, pancurses::COLOR_GREEN, pancurses::COLOR_BLACK);
+        pancurses::init_pair(3, pancurses::COLOR_YELLOW, pancurses::COLOR_BLACK);
+        pancurses::init_pair(4, pancurses::COLOR_BLUE, pancurses::COLOR_BLACK);
+        pancurses::init_pair(5, pancurses::COLOR_MAGENTA, pancurses::COLOR_BLACK);
+        pancurses::init_pair(6, pancurses::COLOR_CYAN, pancurses::COLOR_BLACK);
+        pancurses::init_pair(7, pancurses::COLOR_WHITE, pancurses::COLOR_BLACK);
+
+        window.color_set(7);
 
         Self {
             objects: RefCell::new(Vec::new()),
@@ -70,15 +81,15 @@ impl Graphics {
         self.window.mvaddch(WINDOW_HEIGHT, WINDOW_WIDTH, '+');
     }
 
-    pub fn handle_keys(&self, player: &mut Object, game: &Game) -> bool {
+    pub fn handle_keys(&self, player: &mut Object, game: &Game, objects: &Vec<Object>) -> bool {
         match self.window.getch() {
             Some(Input::KeyDC) | Some(Input::Character('q')) => return true, // exit game
 
             // movement keys
-            Some(Input::KeyUp) => player.move_by(0, -1, game),
-            Some(Input::KeyDown) => player.move_by(0, 1, game),
-            Some(Input::KeyLeft) => player.move_by(-1, 0, game),
-            Some(Input::KeyRight) => player.move_by(1, 0, game),
+            Some(Input::KeyUp) => player.move_by(0, -1, game, objects),
+            Some(Input::KeyDown) => player.move_by(0, 1, game, objects),
+            Some(Input::KeyLeft) => player.move_by(-1, 0, game, objects),
+            Some(Input::KeyRight) => player.move_by(1, 0, game, objects),
 
             Some(_) | None => (),
         }
