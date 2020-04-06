@@ -1,7 +1,7 @@
 use crate::map_gen;
 use crate::map_gen::{Rect, MAX_ROOMS, ROOM_MAX_SIZE, ROOM_MIN_SIZE};
-use crate::monster_gen;
 use crate::object::Object;
+use crate::object_gen;
 use rand::Rng;
 
 pub const MAP_WIDTH: i32 = 100;
@@ -45,7 +45,7 @@ pub fn make_map(objects: &mut Vec<Object>) -> Map {
         let y = rand::thread_rng().gen_range(0, MAP_HEIGHT - h);
 
         let new_room = Rect::new(x, y, w, h);
-        monster_gen::spawn(new_room, objects);
+        object_gen::spawn(new_room, objects, &map);
 
         let failed = rooms
             .iter()

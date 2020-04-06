@@ -86,7 +86,7 @@ impl Graphics {
     }
 
     pub fn add_status(&mut self, msg: String, rounds: u32) {
-        self.statuses.push(Status::new(msg.into(), rounds));
+        self.statuses.push(Status::new(msg, rounds));
     }
 
     pub fn draw_player_stats(&self, player: &mut Object) {

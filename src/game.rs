@@ -10,6 +10,7 @@ const PLAYER_DEF_HP: i32 = 30;
 pub struct Game {
     pub map: Map,
     pub graphics: Graphics,
+    pub inventory: Vec<Object>,
 }
 
 impl Game {
@@ -43,10 +44,11 @@ impl Game {
             frames += 1;
 
             self.graphics.add_status(self.get_names_under_player(), 1);
-            self.graphics
-                .draw_player_stats(&mut self.graphics.objects.borrow_mut()[PLAYER]);
 
             self.graphics.draw(&self.map);
+
+            self.graphics
+                .draw_player_stats(&mut self.graphics.objects.borrow_mut()[PLAYER]);
 
             // regen every n moves
             if frames % 4 == 0 {
@@ -114,6 +116,19 @@ impl Game {
         match (self.graphics.window.getch(), is_alive) {
             (Some(Input::KeyDC), _) | (Some(Input::Character('q')), _) => PlayerAction::Exit, // exit game
 
+            (Some(Input::Character(',')), true) => {
+                // let objs = self.graphics.objects.borrow();
+                let item_id = self.graphics.objects.borrow().iter().position(|object| {
+                    object.pos() == self.graphics.objects.borrow()[PLAYER].pos()
+                        && object.item.is_some()
+                });
+
+                if let Some(item_id) = item_id {
+                    self.pick_item_up(item_id);
+                }
+                PlayerAction::TookTurn
+            }
+
             // movement keys
             (Some(Input::KeyUp), true) => {
                 self.player_move_or_attack(0, -1);
@@ -133,6 +148,24 @@ impl Game {
             }
 
             (Some(_), _) | (None, _) => PlayerAction::DidntTakeTurn,
+        }
+    }
+
+    /// add to the player's inventory and remove from the map
+    pub fn pick_item_up(&mut self, object_id: usize) {
+        if self.inventory.len() >= 26 {
+            self.graphics.add_status(
+                format!(
+                    "Your inventory is full, cannot pick up {}.",
+                    self.graphics.objects.borrow()[object_id].name
+                ),
+                1,
+            );
+        } else {
+            let item = self.graphics.objects.borrow_mut().swap_remove(object_id);
+            self.graphics
+                .add_status(format!("You picked up a {}!", item.name), 1);
+            self.inventory.push(item);
         }
     }
 
@@ -175,6 +208,7 @@ impl Default for Game {
         Self {
             map: vec![vec![Tile::empty(); MAP_HEIGHT as usize]; MAP_WIDTH as usize],
             graphics: Graphics::default(),
+            inventory: vec![],
         }
     }
 }

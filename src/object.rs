@@ -27,6 +27,7 @@ pub struct Object {
     pub alive: bool,
     pub fighter: Option<Fighter>,
     pub ai: Option<AI>,
+    pub item: Option<Item>,
 }
 
 impl Object {
@@ -50,6 +51,7 @@ impl Object {
             name: name.into(),
             fighter: None,
             ai: None,
+            item: None,
         }
     }
 
@@ -144,4 +146,9 @@ pub fn move_towards(id: usize, target_x: i32, target_y: i32, map: &Map, objects:
     let dx = (dx as f32 / distance).round() as i32;
     let dy = (dy as f32 / distance).round() as i32;
     move_by(id, dx, dy, map, objects);
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Item {
+    Heal,
 }
