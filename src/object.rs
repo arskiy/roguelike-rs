@@ -1,5 +1,4 @@
-use crate::curses::Graphics;
-use crate::game::Game;
+use crate::curses::Status;
 use crate::tile::{is_blocked, Map};
 use pancurses::A_BOLD;
 
@@ -20,7 +19,7 @@ pub enum AI {
 pub struct Object {
     pub x: i32,
     pub y: i32,
-    ch: char,
+    pub ch: char,
     color: i16,
     is_bold: bool,
     pub name: String,
@@ -84,53 +83,46 @@ impl Object {
         ((dx.pow(2) + dy.pow(2)) as f32).sqrt()
     }
 
-    pub fn take_damage(&mut self, damage: i32, gfx: &mut Graphics) {
-        self.fighter.as_mut().unwrap().hp -= 1;
+    pub fn take_damage(&mut self, damage: i32, statuses: &mut Vec<Status>) {
         // apply damage if possible
-        let fighter = self.fighter.as_mut().unwrap();
-        // if let Some(fighter) = self.fighter.as_mut() {
-        if damage > 0 {
-            fighter.hp -= damage;
-        }
+        if let Some(fighter) = self.fighter.as_mut() {
+            if damage > 0 {
+                fighter.hp -= damage;
+            }
 
-        if fighter.hp < 0 {
-            self.alive = false;
-            monster_death(self, gfx);
+            if fighter.hp < 0 {
+                statuses.push(Status::new(format!("{} is dead!", self.name), 1));
+
+                self.alive = false;
+                self.ch = '%';
+                self.color = pancurses::COLOR_RED;
+                self.blocks = false;
+                // self.fighter = None;
+                self.ai = None;
+                self.name = format!("remains of {}", self.name);
+                // monster_death(self, statuses);
+            }
         }
-        // }
     }
 
-    pub fn attack(&self, target: &mut Object, gfx: &mut Graphics) {
+    pub fn attack(&self, target: &mut Object, statuses: &mut Vec<Status>) {
         // a simple formula for attack damage
         let damage = self.fighter.map_or(0, |f| f.power) - target.fighter.map_or(0, |f| f.defence);
         if damage > 0 {
             // make the target take some damage
-            gfx.add_status(
+            statuses.push(Status::new(
                 format!("{} attacks {} for {} hp.", self.name, target.name, damage),
                 1,
-            );
-            target.take_damage(damage, gfx);
+            ));
+            target.take_damage(damage, statuses);
             target.fighter.as_mut().unwrap().hp -= damage;
-            gfx.add_status(format!("tgt hp = {}", target.fighter.unwrap().hp), 1);
         } else {
-            gfx.add_status(
+            statuses.push(Status::new(
                 format!("{} attacks {}, but has no effect.", self.name, target.name),
                 1,
-            )
+            ));
         }
     }
-}
-
-fn monster_death(monster: &mut Object, gfx: &mut Graphics) {
-    // transform it into a nasty corpse! it doesn't block, can't be
-    // attacked and doesn't move
-    gfx.add_status(format!("{} is dead!", monster.name), 1);
-    monster.ch = '%';
-    monster.color = pancurses::COLOR_RED;
-    monster.blocks = false;
-    monster.fighter = None;
-    monster.ai = None;
-    monster.name = format!("remains of {}", monster.name);
 }
 
 pub fn move_by(id: usize, dx: i32, dy: i32, map: &Map, objects: &mut [Object]) {

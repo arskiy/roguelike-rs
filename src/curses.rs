@@ -43,6 +43,17 @@ impl Graphics {
             obj.draw(&self.window);
         }
 
+        // draw alive objects with priority
+        let _ = self
+            .objects
+            .borrow()
+            .iter()
+            .filter(|obj| obj.alive)
+            .map(|obj| obj.draw(&self.window));
+
+        // draw player with priority
+        self.objects.borrow()[PLAYER].draw(&self.window);
+
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
                 let wall = map[x as usize][y as usize].block_sight;
@@ -76,8 +87,8 @@ impl Graphics {
         self.statuses.push(Status::new(msg.into(), rounds));
     }
 
-    pub fn draw_player_stats(&self, player: &Object) {
-        if player.alive {
+    pub fn draw_player_stats(&self, player: &mut Object) {
+        if player.alive && player.fighter.unwrap().hp > 0 {
             let hp = player.fighter.unwrap().hp;
 
             if hp < 10 {
@@ -112,6 +123,9 @@ impl Graphics {
 
             self.window.color_set(pancurses::COLOR_WHITE);
         } else {
+            player.alive = false;
+            player.ch = '%';
+
             self.window.color_set(pancurses::COLOR_RED);
             self.window.attron(A_BOLD);
             self.window

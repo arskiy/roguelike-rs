@@ -1,5 +1,5 @@
 use crate::ai;
-use crate::curses::{Graphics, Status, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::curses::{Graphics, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::object::{move_by, Fighter, Object};
 use crate::tile;
 use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
@@ -43,7 +43,7 @@ impl Game {
             frames += 1;
             self.graphics.draw(&self.map);
             self.graphics
-                .draw_player_stats(&self.graphics.objects.borrow()[PLAYER]);
+                .draw_player_stats(&mut self.graphics.objects.borrow_mut()[PLAYER]);
 
             // regen every n moves
             if frames % 4 == 0 {
@@ -130,14 +130,15 @@ impl Game {
             .objects
             .borrow_mut()
             .iter()
-            .position(|object| object.pos() == (x, y));
+            .position(|object| object.pos() == (x, y) && object.alive);
 
         // attack if target found, move otherwise
         match target_id {
             Some(target_id) => {
-                let mut objs = &mut self.graphics.objects.borrow_mut();
+                let mut objs = self.graphics.objects.borrow_mut();
                 let (player, mut target) = ai::mut_two(PLAYER, target_id, &mut objs);
-                player.attack(&mut target, &mut self.graphics);
+
+                player.attack(&mut target, &mut self.graphics.statuses);
             }
             None => {
                 move_by(

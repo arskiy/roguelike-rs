@@ -1,7 +1,6 @@
-use crate::curses::{Status, PLAYER};
+use crate::curses::PLAYER;
 use crate::game::Game;
 use crate::object;
-use crate::object::Object;
 use std::cmp;
 
 pub fn take_turn(monster_id: usize, game: &mut Game) {
@@ -34,10 +33,10 @@ pub fn take_turn(monster_id: usize, game: &mut Game) {
                 mut_two(monster_id, PLAYER, &mut game.graphics.objects.borrow_mut());
             monster.attack(&mut player, &mut game.graphics);
             */
-            game.graphics.objects.borrow()[monster_id].attack(
-                &mut game.graphics.objects.borrow_mut()[PLAYER].clone(),
-                &mut game.graphics,
-            );
+
+            let mut objs = game.graphics.objects.borrow_mut();
+            let (monster, mut player) = mut_two(monster_id, PLAYER, &mut objs);
+            monster.attack(&mut player, &mut game.graphics.statuses)
         }
     }
 }
