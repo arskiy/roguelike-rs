@@ -74,7 +74,7 @@ impl Game {
                 let m = self.graphics.objects.borrow().len();
                 for id in 0..m {
                     if self.graphics.objects.borrow()[id].ai.is_some() {
-                        // ai::take_turn(id, self);
+                        ai::take_turn(id, self);
                     }
                 }
             }

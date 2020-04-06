@@ -6,7 +6,7 @@ use crate::tile::{is_blocked, Map};
 
 use rand::Rng;
 
-const MAX_ROOM_MONSTERS: i32 = 3;
+const MAX_ROOM_MONSTERS: i32 = 2;
 const MAX_ROOM_ITEMS: i32 = 4;
 
 pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map) {
