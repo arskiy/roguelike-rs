@@ -1,3 +1,4 @@
+use crate::ai::AI;
 use crate::curses::Status;
 use crate::item::Item;
 use crate::tile::{is_blocked, Map};
@@ -9,11 +10,6 @@ pub struct Fighter {
     pub hp: i32,
     pub defence: i32,
     pub power: i32,
-}
-
-#[derive(Clone)]
-pub enum AI {
-    Basic,
 }
 
 #[derive(Clone)]

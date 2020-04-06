@@ -1,12 +1,13 @@
+use crate::ai::AI;
 use crate::item::Item;
 use crate::map_gen::Rect;
-use crate::object::{Fighter, Object, AI};
+use crate::object::{Fighter, Object};
 use crate::tile::{is_blocked, Map};
 
 use rand::Rng;
 
 const MAX_ROOM_MONSTERS: i32 = 3;
-const MAX_ROOM_ITEMS: i32 = 2;
+const MAX_ROOM_ITEMS: i32 = 4;
 
 pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map) {
     let num_monsters = rand::thread_rng().gen_range(0, MAX_ROOM_MONSTERS + 1);
@@ -54,7 +55,7 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map) {
         if !is_blocked(x, y, map, objects) {
             let dice = rand::random::<f32>();
             // create a healing potion
-            let item = if dice < 0.7 {
+            let item = if dice < 0.5 {
                 let mut object = Object::new(
                     x,
                     y,
@@ -66,7 +67,7 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map) {
                 );
                 object.item = Some(Item::Heal);
                 object
-            } else {
+            } else if dice < 0.5 + 0.166 {
                 let mut object = Object::new(
                     x,
                     y,
@@ -77,6 +78,30 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map) {
                     false,
                 );
                 object.item = Some(Item::Lightning);
+                object
+            } else if dice < 0.5 + 0.166 + 0.166 {
+                let mut object = Object::new(
+                    x,
+                    y,
+                    '#',
+                    pancurses::COLOR_GREEN,
+                    false,
+                    "scroll of confusion",
+                    false,
+                );
+                object.item = Some(Item::Confusion);
+                object
+            } else {
+                let mut object = Object::new(
+                    x,
+                    y,
+                    '#',
+                    pancurses::COLOR_RED,
+                    false,
+                    "scroll of fire",
+                    false,
+                );
+                object.item = Some(Item::Fire);
                 object
             };
             objects.push(item);

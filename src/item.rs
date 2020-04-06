@@ -2,15 +2,24 @@ use crate::curses::{Status, PLAYER};
 use crate::game::{Game, PlayerAction};
 use crate::object::Object;
 
-const HEAL_AMOUNT: i32 = 4;
+const HEAL_AMOUNT: i32 = 5;
 
 const LIGHTNING_DAMAGE: i32 = 40;
 const LIGHTNING_RANGE: i32 = 5;
+
+const CONFUSION_RANGE: i32 = 8;
+const CONFUSION_NUM_TURNS: i32 = 10;
+
+const FIRE_RADIUS: i32 = 3;
+const FIRE_DAMAGE: i32 = 12;
+const FIRE_SELF_DAMAGE: i32 = 3;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Item {
     Heal,
     Lightning,
+    Confusion,
+    Fire,
 }
 
 enum UseResult {
@@ -23,6 +32,8 @@ pub fn use_item(inv_id: usize, game: &mut Game) -> PlayerAction {
         let on_use = match item {
             Item::Heal => cast_heal,
             Item::Lightning => cast_lightning,
+            Item::Confusion => cast_confusion,
+            Item::Fire => cast_fire,
         };
         match on_use(inv_id, game) {
             UseResult::UsedUp => {
@@ -80,6 +91,67 @@ fn cast_lightning(_inv_id: usize, game: &mut Game) -> UseResult {
             .add_status("No enemy is close enough.".to_string(), 1);
         UseResult::Cancelled
     }
+}
+
+fn cast_confusion(_inv_id: usize, game: &mut Game) -> UseResult {
+    use crate::ai::AI;
+
+    let monster_id = closest_monster(&game.graphics.objects.borrow(), CONFUSION_RANGE);
+    if let Some(monster_id) = monster_id {
+        game.graphics.add_status(
+            format!(
+                "You confused {}!",
+                game.graphics.objects.borrow()[monster_id].name,
+            ),
+            1,
+        );
+        let mut objs = game.graphics.objects.borrow_mut();
+        let old_ai = objs[monster_id].ai.take().unwrap_or(AI::Basic);
+        objs[monster_id].ai = Some(AI::Confused {
+            prev_ai: Box::new(old_ai),
+            turns: CONFUSION_NUM_TURNS,
+        });
+
+        UseResult::UsedUp
+    } else {
+        game.graphics
+            .add_status("No enemy is close enough.".to_string(), 1);
+        UseResult::Cancelled
+    }
+}
+
+fn cast_fire(_inv_id: usize, game: &mut Game) -> UseResult {
+    game.graphics.add_status(
+        format!(
+            "A wall of fire is created in the {} tiles around you!",
+            FIRE_RADIUS
+        ),
+        1,
+    );
+
+    let player = game.graphics.objects.borrow()[PLAYER].clone();
+
+    for obj in game.graphics.objects.borrow_mut().iter_mut() {
+        if obj.distance_to(&player) <= FIRE_RADIUS as f32 && obj.fighter.is_some() {
+            if obj.name == "player" {
+                game.graphics.statuses.push(Status::new(
+                    format!("You caught fire for {} hp.", FIRE_SELF_DAMAGE),
+                    1,
+                ));
+                obj.take_damage(FIRE_SELF_DAMAGE, &mut game.graphics.statuses);
+            } else {
+                game.graphics.statuses.push(Status::new(
+                    format!(
+                        "The {} gets burned for {} hit points.",
+                        obj.name, FIRE_DAMAGE
+                    ),
+                    1,
+                ));
+                obj.take_damage(FIRE_DAMAGE, &mut game.graphics.statuses);
+            }
+        }
+    }
+    UseResult::UsedUp
 }
 
 /// find closest enemy, up to a maximum range
