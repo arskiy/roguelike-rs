@@ -1,5 +1,6 @@
+use crate::item::Item;
 use crate::map_gen::Rect;
-use crate::object::{Fighter, Item, Object, AI};
+use crate::object::{Fighter, Object, AI};
 use crate::tile::{is_blocked, Map};
 
 use rand::Rng;

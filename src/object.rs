@@ -1,4 +1,5 @@
 use crate::curses::Status;
+use crate::item::Item;
 use crate::tile::{is_blocked, Map};
 use pancurses::A_BOLD;
 
@@ -125,6 +126,15 @@ impl Object {
             ));
         }
     }
+
+    pub fn heal(&mut self, amount: i32) {
+        if let Some(ref mut fighter) = self.fighter {
+            fighter.hp += amount;
+            if fighter.hp > fighter.max_hp {
+                fighter.hp = fighter.max_hp;
+            }
+        }
+    }
 }
 
 pub fn move_by(id: usize, dx: i32, dy: i32, map: &Map, objects: &mut [Object]) {
@@ -146,9 +156,4 @@ pub fn move_towards(id: usize, target_x: i32, target_y: i32, map: &Map, objects:
     let dx = (dx as f32 / distance).round() as i32;
     let dy = (dy as f32 / distance).round() as i32;
     move_by(id, dx, dy, map, objects);
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Item {
-    Heal,
 }

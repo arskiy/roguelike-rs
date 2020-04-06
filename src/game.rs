@@ -1,9 +1,10 @@
 use crate::ai;
 use crate::curses::{Graphics, INV_X, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::item;
 use crate::object::{move_by, Fighter, Object};
 use crate::tile;
 use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
-use pancurses::{Input, Window};
+use pancurses::Input;
 
 const PLAYER_DEF_HP: i32 = 30;
 
@@ -51,23 +52,6 @@ impl Game {
                 .draw_player_stats(&mut self.graphics.objects.borrow_mut()[PLAYER]);
 
             self.show_inventory();
-
-            // regen every n moves
-            if frames % 4 == 0 {
-                frames = 0;
-                let player_hp = self.graphics.objects.borrow()[PLAYER]
-                    .clone()
-                    .fighter
-                    .unwrap()
-                    .hp;
-                if player_hp < PLAYER_DEF_HP {
-                    self.graphics.objects.borrow_mut()[PLAYER]
-                        .fighter
-                        .as_mut()
-                        .unwrap()
-                        .hp += 1;
-                }
-            }
 
             let player_action = self.handle_keys();
 
@@ -133,6 +117,12 @@ impl Game {
 
             // rest, do nothing for a turn
             (Some(Input::Character('.')), true) => PlayerAction::TookTurn,
+
+            // apply (use) an item
+            (Some(Input::Character('a')), true) => self.apply_item(),
+
+            (Some(Input::Character('d')), true) => self.drop_item(),
+            (Some(Input::Character('D')), true) => self.drop_item_by_type(),
 
             // movement keys
             (Some(Input::KeyUp), true) | (Some(Input::Character('k')), true) => {
@@ -211,19 +201,60 @@ impl Game {
     // inventory-related methods
     fn show_inventory(&self) {
         self.graphics.window.color_set(pancurses::COLOR_WHITE);
-        self.graphics.window.mvaddstr(1, INV_X, "Inventory:");
-        for (i, item) in self.inventory.iter().enumerate() {
-            self.graphics.window.mvaddstr(
-                (i + 3) as i32,
-                INV_X,
-                format!("{} - {}", (i + 97) as u8 as char, item.name.clone()),
-            );
+        if self.inventory.len() > 0 {
+            self.graphics.window.mvaddstr(1, INV_X, "Inventory:");
+            for (i, item) in self.inventory.iter().enumerate() {
+                self.graphics.window.mvaddstr(
+                    (i + 3) as i32,
+                    INV_X,
+                    format!("{} - {}", (i + 97) as u8 as char, item.name.clone()),
+                );
+            }
+        } else {
+            self.graphics
+                .window
+                .mvaddstr(1, INV_X, "Your inventory is empty.");
         }
     }
 
-    fn apply_item(&self) {}
+    fn apply_item(&mut self) -> PlayerAction {
+        self.graphics
+            .add_status("PRESS A KEY TO USE AN ITEM:".to_string(), 1);
+        self.graphics.draw(&self.map);
+        self.show_inventory();
+        self.graphics
+            .draw_player_stats(&mut self.graphics.objects.borrow_mut()[PLAYER]);
+        match self.graphics.window.getch() {
+            Some(Input::Character(c)) => match c {
+                'a'..='z' => {
+                    let inv_id = c as u8 - 97;
+                    if (inv_id as usize) < self.inventory.len() {
+                        return item::use_item(inv_id as usize, self);
+                    } else {
+                        self.graphics
+                            .add_status(format!("You don't have an item at {}.", c), 1);
+                    }
+                }
+                _ => self
+                    .graphics
+                    .add_status("Please press a key from a to z.".to_string(), 1),
+            },
 
-    fn discard_item(&self) {}
+            Some(Input::KeyDC) => self.graphics.add_status("Cancelled.".to_string(), 1),
+            _ => self
+                .graphics
+                .add_status("Please press a key from a to z.".to_string(), 1),
+        }
+        PlayerAction::DidntTakeTurn
+    }
+
+    fn drop_item(&mut self) -> PlayerAction {
+        PlayerAction::DidntTakeTurn
+    }
+
+    fn drop_item_by_type(&mut self) -> PlayerAction {
+        PlayerAction::DidntTakeTurn
+    }
 }
 
 impl Default for Game {
