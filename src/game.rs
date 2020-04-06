@@ -5,6 +5,8 @@ use crate::tile;
 use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
 use pancurses::Input;
 
+const PLAYER_DEF_HP: i32 = 30;
+
 pub struct Game {
     pub map: Map,
     pub graphics: Graphics,
@@ -25,8 +27,8 @@ impl Game {
         player.alive = true;
 
         player.fighter = Some(Fighter {
-            max_hp: 30,
-            hp: 30,
+            max_hp: PLAYER_DEF_HP,
+            hp: PLAYER_DEF_HP,
             defence: 2,
             power: 5,
         });
@@ -36,11 +38,29 @@ impl Game {
         // procedurally generate the map
         self.map = tile::make_map(&mut self.graphics.objects.borrow_mut());
 
+        let mut frames = 1;
         loop {
+            frames += 1;
             self.graphics.draw(&self.map);
             self.graphics
                 .draw_player_stats(&self.graphics.objects.borrow()[PLAYER]);
 
+            // regen every n moves
+            if frames % 4 == 0 {
+                frames = 0;
+                let player_hp = self.graphics.objects.borrow()[PLAYER]
+                    .clone()
+                    .fighter
+                    .unwrap()
+                    .hp;
+                if player_hp < PLAYER_DEF_HP {
+                    self.graphics.objects.borrow_mut()[PLAYER]
+                        .fighter
+                        .as_mut()
+                        .unwrap()
+                        .hp += 1;
+                }
+            }
             let player_action = self.handle_keys();
 
             if let PlayerAction::Exit = player_action {
@@ -115,8 +135,8 @@ impl Game {
         // attack if target found, move otherwise
         match target_id {
             Some(target_id) => {
-                let (mut player, mut target) =
-                    ai::mut_two(PLAYER, target_id, &mut self.graphics.objects.borrow_mut());
+                let mut objs = &mut self.graphics.objects.borrow_mut();
+                let (player, mut target) = ai::mut_two(PLAYER, target_id, &mut objs);
                 player.attack(&mut target, &mut self.graphics);
             }
             None => {

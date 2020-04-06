@@ -79,11 +79,13 @@ impl Graphics {
     pub fn draw_player_stats(&self, player: &Object) {
         if player.alive {
             let hp = player.fighter.unwrap().hp;
+
             if hp < 10 {
                 self.window.color_set(pancurses::COLOR_RED);
             } else {
                 self.window.color_set(pancurses::COLOR_GREEN);
             }
+
             self.window.mvaddstr(
                 STATUS_Y - 2,
                 PLAYER_STATS_X,
@@ -93,6 +95,7 @@ impl Graphics {
                     player.fighter.unwrap().max_hp
                 ),
             );
+
             self.window.color_set(pancurses::COLOR_YELLOW);
             self.window.mvaddstr(
                 STATUS_Y - 1,

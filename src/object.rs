@@ -84,16 +84,23 @@ impl Object {
         ((dx.pow(2) + dy.pow(2)) as f32).sqrt()
     }
 
-    pub fn take_damage(&mut self, damage: i32) {
+    pub fn take_damage(&mut self, damage: i32, gfx: &mut Graphics) {
+        self.fighter.as_mut().unwrap().hp -= 1;
         // apply damage if possible
-        if let Some(fighter) = self.fighter.as_mut() {
-            if damage > 0 {
-                fighter.hp -= damage;
-            }
+        let fighter = self.fighter.as_mut().unwrap();
+        // if let Some(fighter) = self.fighter.as_mut() {
+        if damage > 0 {
+            fighter.hp -= damage;
         }
+
+        if fighter.hp < 0 {
+            self.alive = false;
+            monster_death(self, gfx);
+        }
+        // }
     }
 
-    pub fn attack(&mut self, target: &mut Object, gfx: &mut Graphics) {
+    pub fn attack(&self, target: &mut Object, gfx: &mut Graphics) {
         // a simple formula for attack damage
         let damage = self.fighter.map_or(0, |f| f.power) - target.fighter.map_or(0, |f| f.defence);
         if damage > 0 {
@@ -102,7 +109,9 @@ impl Object {
                 format!("{} attacks {} for {} hp.", self.name, target.name, damage),
                 1,
             );
-            target.take_damage(damage);
+            target.take_damage(damage, gfx);
+            target.fighter.as_mut().unwrap().hp -= damage;
+            gfx.add_status(format!("tgt hp = {}", target.fighter.unwrap().hp), 1);
         } else {
             gfx.add_status(
                 format!("{} attacks {}, but has no effect.", self.name, target.name),
@@ -110,6 +119,18 @@ impl Object {
             )
         }
     }
+}
+
+fn monster_death(monster: &mut Object, gfx: &mut Graphics) {
+    // transform it into a nasty corpse! it doesn't block, can't be
+    // attacked and doesn't move
+    gfx.add_status(format!("{} is dead!", monster.name), 1);
+    monster.ch = '%';
+    monster.color = pancurses::COLOR_RED;
+    monster.blocks = false;
+    monster.fighter = None;
+    monster.ai = None;
+    monster.name = format!("remains of {}", monster.name);
 }
 
 pub fn move_by(id: usize, dx: i32, dy: i32, map: &Map, objects: &mut [Object]) {
