@@ -1,9 +1,9 @@
 use crate::ai;
-use crate::curses::{Graphics, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::curses::{Graphics, INV_X, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::object::{move_by, Fighter, Object};
 use crate::tile;
 use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
-use pancurses::Input;
+use pancurses::{Input, Window};
 
 const PLAYER_DEF_HP: i32 = 30;
 
@@ -49,6 +49,8 @@ impl Game {
 
             self.graphics
                 .draw_player_stats(&mut self.graphics.objects.borrow_mut()[PLAYER]);
+
+            self.show_inventory();
 
             // regen every n moves
             if frames % 4 == 0 {
@@ -129,20 +131,23 @@ impl Game {
                 PlayerAction::TookTurn
             }
 
+            // rest, do nothing for a turn
+            (Some(Input::Character('.')), true) => PlayerAction::TookTurn,
+
             // movement keys
-            (Some(Input::KeyUp), true) => {
+            (Some(Input::KeyUp), true) | (Some(Input::Character('k')), true) => {
                 self.player_move_or_attack(0, -1);
                 PlayerAction::TookTurn
             }
-            (Some(Input::KeyDown), true) => {
+            (Some(Input::KeyDown), true) | (Some(Input::Character('j')), true) => {
                 self.player_move_or_attack(0, 1);
                 PlayerAction::TookTurn
             }
-            (Some(Input::KeyLeft), true) => {
+            (Some(Input::KeyLeft), true) | (Some(Input::Character('h')), true) => {
                 self.player_move_or_attack(-1, 0);
                 PlayerAction::TookTurn
             }
-            (Some(Input::KeyRight), true) => {
+            (Some(Input::KeyRight), true) | (Some(Input::Character('l')), true) => {
                 self.player_move_or_attack(1, 0);
                 PlayerAction::TookTurn
             }
@@ -201,6 +206,24 @@ impl Game {
             }
         }
     }
+
+    // ------------------------------------
+    // inventory-related methods
+    fn show_inventory(&self) {
+        self.graphics.window.color_set(pancurses::COLOR_WHITE);
+        self.graphics.window.mvaddstr(1, INV_X, "Inventory:");
+        for (i, item) in self.inventory.iter().enumerate() {
+            self.graphics.window.mvaddstr(
+                (i + 3) as i32,
+                INV_X,
+                format!("{} - {}", (i + 97) as u8 as char, item.name.clone()),
+            );
+        }
+    }
+
+    fn apply_item(&self) {}
+
+    fn discard_item(&self) {}
 }
 
 impl Default for Game {

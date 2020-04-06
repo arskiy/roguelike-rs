@@ -4,6 +4,9 @@ use crate::object::Object;
 use crate::tile::{Map, MAP_HEIGHT, MAP_WIDTH};
 use pancurses::{Window, A_BOLD};
 
+pub const SCR_WIDTH: i32 = 130;
+pub const INV_X: i32 = 101;
+
 pub const WINDOW_WIDTH: i32 = 99;
 pub const WINDOW_HEIGHT: i32 = 40;
 
@@ -142,7 +145,7 @@ impl Graphics {
     }
 
     fn draw_borders(&self) {
-        for i in 0..WINDOW_WIDTH {
+        for i in 0..SCR_WIDTH {
             self.window.mvaddch(0, i, '-');
             self.window.mvaddch(WINDOW_HEIGHT, i, '-');
         }
@@ -150,12 +153,16 @@ impl Graphics {
         for i in 0..WINDOW_HEIGHT {
             self.window.mvaddch(i, 0, '|');
             self.window.mvaddch(i, WINDOW_WIDTH, '|');
+            self.window.mvaddch(i, SCR_WIDTH, '|');
         }
 
         self.window.mvaddch(0, 0, '+');
         self.window.mvaddch(WINDOW_HEIGHT, 0, '+');
         self.window.mvaddch(0, WINDOW_WIDTH, '+');
+        self.window.mvaddch(0, SCR_WIDTH, '+');
+        self.window.mvaddch(WINDOW_HEIGHT, WINDOW_WIDTH / 2, '+');
         self.window.mvaddch(WINDOW_HEIGHT, WINDOW_WIDTH, '+');
+        self.window.mvaddch(WINDOW_HEIGHT, SCR_WIDTH, '+');
     }
 }
 
