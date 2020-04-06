@@ -52,18 +52,34 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map) {
 
         // only place it if the tile is not blocked
         if !is_blocked(x, y, map, objects) {
+            let dice = rand::random::<f32>();
             // create a healing potion
-            let mut object = Object::new(
-                x,
-                y,
-                '!',
-                pancurses::COLOR_MAGENTA,
-                false,
-                "healing potion",
-                false,
-            );
-            object.item = Some(Item::Heal);
-            objects.push(object);
+            let item = if dice < 0.7 {
+                let mut object = Object::new(
+                    x,
+                    y,
+                    '!',
+                    pancurses::COLOR_MAGENTA,
+                    false,
+                    "healing potion",
+                    false,
+                );
+                object.item = Some(Item::Heal);
+                object
+            } else {
+                let mut object = Object::new(
+                    x,
+                    y,
+                    '#',
+                    pancurses::COLOR_CYAN,
+                    false,
+                    "scroll of lightning",
+                    false,
+                );
+                object.item = Some(Item::Lightning);
+                object
+            };
+            objects.push(item);
         }
     }
 }

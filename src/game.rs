@@ -6,7 +6,7 @@ use crate::tile;
 use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
 use pancurses::Input;
 
-const PLAYER_DEF_HP: i32 = 30;
+const PLAYER_DEF_HP: i32 = 40;
 
 pub struct Game {
     pub map: Map,
@@ -40,10 +40,7 @@ impl Game {
         // procedurally generate the map
         self.map = tile::make_map(&mut self.graphics.objects.borrow_mut());
 
-        let mut frames = 1;
         loop {
-            frames += 1;
-
             self.graphics.add_status(self.get_names_under_player(), 1);
 
             self.graphics.draw(&self.map);
