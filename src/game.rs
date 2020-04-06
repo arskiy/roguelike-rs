@@ -41,9 +41,12 @@ impl Game {
         let mut frames = 1;
         loop {
             frames += 1;
-            self.graphics.draw(&self.map);
+
+            self.graphics.add_status(self.get_names_under_player(), 1);
             self.graphics
                 .draw_player_stats(&mut self.graphics.objects.borrow_mut()[PLAYER]);
+
+            self.graphics.draw(&self.map);
 
             // regen every n moves
             if frames % 4 == 0 {
@@ -61,6 +64,7 @@ impl Game {
                         .hp += 1;
                 }
             }
+
             let player_action = self.handle_keys();
 
             if let PlayerAction::Exit = player_action {
@@ -90,6 +94,19 @@ impl Game {
                 }
             }
         }
+    }
+
+    fn get_names_under_player(&self) -> String {
+        let objs = self.graphics.objects.borrow();
+        let (px, py) = objs[PLAYER].pos();
+
+        let names = objs
+            .iter()
+            .filter(|obj| obj.pos() == (px, py) && obj.name != "player")
+            .map(|obj| obj.name.clone())
+            .collect::<Vec<_>>();
+
+        names.join(", ")
     }
 
     pub fn handle_keys(&mut self) -> PlayerAction {

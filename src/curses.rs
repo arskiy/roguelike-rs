@@ -62,14 +62,16 @@ impl Graphics {
                 }
             }
         }
+
         self.window.mvaddstr(STATUS_Y - 2, 1, "Message log:");
+
         for y in (STATUS_Y - 2)..WINDOW_HEIGHT {
             self.window.mvaddch(y, WINDOW_WIDTH / 2, '|');
         }
 
         for (i, status) in self.statuses.iter_mut().enumerate() {
             self.window
-                .mvaddstr(STATUS_Y + i as i32, 1, status.msg.clone());
+                .mvaddstr(STATUS_Y - 1 + i as i32, 1, status.msg.clone());
             status.rounds -= 1;
         }
 
