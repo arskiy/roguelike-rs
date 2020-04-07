@@ -44,7 +44,7 @@ impl Game {
         self.graphics.push_obj(player);
 
         // procedurally generate the map
-        self.map = tile::make_map(&mut self.graphics.objects.borrow_mut());
+        self.map = tile::make_map(&mut self.graphics.objects.borrow_mut(), self.dungeon_level);
 
         loop {
             self.graphics.add_status(self.get_names_under_player(), 1);
@@ -212,7 +212,7 @@ impl Game {
         let heal_hp = objs[PLAYER].fighter.map_or(0, |f| f.max_hp / 2);
         objs[PLAYER].heal(heal_hp);
         self.dungeon_level += 1;
-        self.map = tile::make_map(&mut objs);
+        self.map = tile::make_map(&mut objs, self.dungeon_level);
     }
 
     fn level_up(&mut self) {
@@ -240,7 +240,7 @@ impl Game {
             while choice.is_none() {
                 // keep asking until a choice is made
                 self.graphics.statuses.push(Status::new(
-                    "Level up! Choose a stat to raise:".to_string(),
+                    "Level up! Choose a stat to raise: (press the respective number)".to_string(),
                     1,
                 ));
                 self.graphics

@@ -31,7 +31,7 @@ impl Tile {
 
 pub type Map = Vec<Vec<Tile>>;
 
-pub fn make_map(objects: &mut Vec<Object>) -> Map {
+pub fn make_map(objects: &mut Vec<Object>, level: u32) -> Map {
     let mut map = vec![vec![Tile::wall(); MAP_HEIGHT as usize]; MAP_WIDTH as usize];
 
     let mut rooms = vec![];
@@ -41,11 +41,11 @@ pub fn make_map(objects: &mut Vec<Object>) -> Map {
         let w = rand::thread_rng().gen_range(ROOM_MIN_SIZE, ROOM_MAX_SIZE + 1);
         let h = rand::thread_rng().gen_range(ROOM_MIN_SIZE, ROOM_MAX_SIZE + 1);
         // random position without going out of the boundaries of the map
-        let x = rand::thread_rng().gen_range(0, MAP_WIDTH - w);
-        let y = rand::thread_rng().gen_range(0, MAP_HEIGHT - h);
+        let x = rand::thread_rng().gen_range(1, MAP_WIDTH - w);
+        let y = rand::thread_rng().gen_range(1, MAP_HEIGHT - h);
 
         let new_room = Rect::new(x, y, w, h);
-        object_gen::spawn(new_room, objects, &map);
+        object_gen::spawn(new_room, objects, &map, level);
 
         let failed = rooms
             .iter()

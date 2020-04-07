@@ -7,11 +7,50 @@ use crate::tile::{is_blocked, Map};
 use rand::distributions::{IndependentSample, Weighted, WeightedChoice};
 use rand::Rng;
 
-const MAX_ROOM_MONSTERS: i32 = 4;
-const MAX_ROOM_ITEMS: i32 = 3;
+struct Transition {
+    level: u32,
+    value: u32,
+}
 
-pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map) {
-    let num_monsters = rand::thread_rng().gen_range(0, MAX_ROOM_MONSTERS + 1);
+fn from_dungeon_level(table: &[Transition], level: u32) -> u32 {
+    table
+        .iter()
+        .rev()
+        .find(|transition| level >= transition.level)
+        .map_or(0, |transition| transition.value)
+}
+
+pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map, level: u32) {
+    // maximum number of monsters per room
+    let max_monsters = from_dungeon_level(
+        &[
+            Transition { level: 1, value: 2 },
+            Transition { level: 4, value: 3 },
+            Transition { level: 6, value: 5 },
+        ],
+        level,
+    );
+
+    // choose random number of monsters
+    let num_monsters = rand::thread_rng().gen_range(0, max_monsters + 1);
+
+    let troll_chance = from_dungeon_level(
+        &[
+            Transition {
+                level: 3,
+                value: 15,
+            },
+            Transition {
+                level: 5,
+                value: 30,
+            },
+            Transition {
+                level: 7,
+                value: 60,
+            },
+        ],
+        level,
+    );
 
     let monster_chances = &mut [
         Weighted {
@@ -19,10 +58,19 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map) {
             item: "orc",
         },
         Weighted {
-            weight: 20,
+            weight: troll_chance,
             item: "troll",
         },
     ];
+
+    // maximum number of items per room
+    let max_items = from_dungeon_level(
+        &[
+            Transition { level: 1, value: 1 },
+            Transition { level: 4, value: 2 },
+        ],
+        level,
+    );
 
     let item_chances = &mut [
         Weighted {
@@ -86,7 +134,7 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map) {
         }
     }
 
-    let num_items = rand::thread_rng().gen_range(0, MAX_ROOM_ITEMS + 1);
+    let num_items = rand::thread_rng().gen_range(0, max_items + 1);
 
     for _ in 0..num_items {
         // choose random spot for this item
