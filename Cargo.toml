@@ -1,6 +1,6 @@
 [package]
 name = "roguelike-rs"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Alice Micheloni <alicemicheloni@tutanota.com>"]
 edition = "2018"
 
