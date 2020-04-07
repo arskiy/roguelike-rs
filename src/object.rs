@@ -1,16 +1,17 @@
 use crate::ai::AI;
 use crate::curses::Status;
-use crate::item::Item;
+use crate::game::Game;
+use crate::item::{Equipment, Item, Slot};
 use crate::tile::{is_blocked, Map};
 use pancurses::A_BOLD;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Fighter {
-    pub max_hp: i32,
     pub hp: i32,
-    pub defence: i32,
     pub xp: i32,
-    pub power: i32,
+    pub base_power: i32,
+    pub base_defence: i32,
+    pub base_max_hp: i32,
 }
 
 #[derive(Clone)]
@@ -28,6 +29,7 @@ pub struct Object {
     pub item: Option<Item>,
     pub level: i32,
     pub level_up_xp: i32,
+    pub equipment: Option<Equipment>,
 }
 
 impl Object {
@@ -54,6 +56,7 @@ impl Object {
             item: None,
             level: 1,
             level_up_xp: 0,
+            equipment: None,
         }
     }
 
@@ -111,8 +114,8 @@ impl Object {
         None
     }
 
-    pub fn attack(&mut self, target: &mut Object, statuses: &mut Vec<Status>) {
-        let damage = self.fighter.map_or(0, |f| f.power) - target.fighter.map_or(0, |f| f.defence);
+    pub fn attack(&mut self, target: &mut Object, statuses: &mut Vec<Status>, inv: &Vec<Object>) {
+        let damage = self.power(inv) - target.defence(inv);
         if damage > 0 {
             statuses.push(Status::new(
                 format!("{} attacks {} for {} hp.", self.name, target.name, damage),
@@ -132,11 +135,112 @@ impl Object {
     pub fn heal(&mut self, amount: i32) {
         if let Some(ref mut fighter) = self.fighter {
             fighter.hp += amount;
-            if fighter.hp > fighter.max_hp {
-                fighter.hp = fighter.max_hp;
+            if fighter.hp > fighter.base_max_hp {
+                fighter.hp = fighter.base_max_hp;
             }
         }
     }
+    pub fn power(&self, inv: &Vec<Object>) -> i32 {
+        let base_power = self.fighter.map_or(0, |f| f.base_power);
+        let bonus: i32 = self
+            .get_all_equipped(inv)
+            .iter()
+            .map(|e| e.power_bonus)
+            .sum();
+        base_power + bonus
+    }
+
+    pub fn get_all_equipped(&self, inv: &Vec<Object>) -> Vec<Equipment> {
+        if self.name == "player" {
+            inv.iter()
+                .filter(|item| item.equipment.map_or(false, |e| e.equipped))
+                .map(|item| item.equipment.unwrap())
+                .collect()
+        } else {
+            vec![] // other objects have no equipment
+        }
+    }
+
+    pub fn defence(&self, inv: &Vec<Object>) -> i32 {
+        let base_defence = self.fighter.map_or(0, |f| f.base_defence);
+        let bonus: i32 = self
+            .get_all_equipped(inv)
+            .iter()
+            .map(|e| e.defense_bonus)
+            .sum();
+        base_defence + bonus
+    }
+
+    pub fn max_hp(&self, inv: &Vec<Object>) -> i32 {
+        let base_max_hp = self.fighter.map_or(0, |f| f.base_max_hp);
+        let bonus: i32 = self
+            .get_all_equipped(inv)
+            .iter()
+            .map(|e| e.max_hp_bonus)
+            .sum();
+        base_max_hp + bonus
+    }
+
+    pub fn equip(&mut self, statuses: &mut Vec<Status>) {
+        if self.item.is_none() {
+            statuses.push(Status::new(
+                format!("Can't equip {} because it's not an Item.", self.name),
+                1,
+            ));
+            return;
+        };
+        if let Some(ref mut equipment) = self.equipment {
+            if !equipment.equipped {
+                equipment.equipped = true;
+                statuses.push(Status::new(
+                    format!("Equipped {} on {}.", self.name, equipment.slot),
+                    1,
+                ));
+            }
+        } else {
+            statuses.push(Status::new(
+                format!("Can't equip {} because it's not an Equipment.", self.name),
+                1,
+            ));
+        }
+    }
+
+    pub fn dequip(&mut self, statuses: &mut Vec<Status>) {
+        if self.item.is_none() {
+            statuses.push(Status::new(
+                format!("Can't dequip {} because it's not an Item.", self.name),
+                1,
+            ));
+            return;
+        };
+        if let Some(ref mut equipment) = self.equipment {
+            if equipment.equipped {
+                equipment.equipped = false;
+                statuses.push(Status::new(
+                    format!("Dequipped {} from {}.", self.name, equipment.slot),
+                    1,
+                ));
+            }
+        } else {
+            statuses.push(Status::new(
+                format!("Can't dequip {} because it's not an Equipment.", self.name),
+                1,
+            ));
+        }
+    }
+}
+
+pub fn get_equipped_in_slot(slot: Slot, inventory: &[Object]) -> Option<usize> {
+    for (inventory_id, item) in inventory.iter().enumerate() {
+        if item
+            .equipment
+            .as_ref()
+            .map_or(false, |e| e.equipped && e.slot == slot)
+        {
+            return Some(inventory_id);
+        }
+    }
+    None
 }
 
 pub fn move_by(id: usize, dx: i32, dy: i32, map: &Map, objects: &mut [Object]) {

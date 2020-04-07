@@ -80,8 +80,19 @@ pub fn make_map(objects: &mut Vec<Object>, level: u32) -> Map {
         rooms.push(new_room);
     }
 
-    let (last_room_x, last_room_y) =
-        rooms[rand::thread_rng().gen_range(rooms.len() - 4, rooms.len() - 2)].center();
+    let (mut last_room_x, mut last_room_y) = rooms[rooms.len() - 1].center();
+
+    while is_blocked(last_room_x, last_room_y, &map, objects) {
+        last_room_y += rand::thread_rng().gen_range(-1, 1);
+        last_room_x += rand::thread_rng().gen_range(-1, 1);
+
+        if last_room_x > MAP_WIDTH || last_room_x < 0 || last_room_y < 0 || last_room_y > MAP_HEIGHT
+        {
+            let (x, y) = rooms[rooms.len() - 1].center();
+            last_room_x = x;
+            last_room_y = y;
+        }
+    }
 
     let stairs = Object::new(
         last_room_x,

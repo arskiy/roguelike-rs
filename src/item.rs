@@ -1,5 +1,6 @@
 use crate::curses::{Status, PLAYER};
 use crate::game::{Game, PlayerAction};
+use crate::object;
 use crate::object::Object;
 
 const HEAL_AMOUNT: i32 = 5;
@@ -20,10 +21,30 @@ pub enum Item {
     Lightning,
     Confusion,
     Fire,
+    Sword,
+    Shield,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+/// An object that can be equipped, yielding bonuses.
+pub struct Equipment {
+    pub slot: Slot,
+    pub equipped: bool,
+    pub power_bonus: i32,
+    pub max_hp_bonus: i32,
+    pub defense_bonus: i32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Slot {
+    LeftHand,
+    RightHand,
+    Head,
 }
 
 enum UseResult {
     UsedUp,
+    UsedAndKept,
     Cancelled,
 }
 
@@ -34,11 +55,14 @@ pub fn use_item(inv_id: usize, game: &mut Game) -> PlayerAction {
             Item::Lightning => cast_lightning,
             Item::Confusion => cast_confusion,
             Item::Fire => cast_fire,
+            Item::Sword => toggle_equipment,
+            Item::Shield => toggle_equipment,
         };
         match on_use(inv_id, game) {
             UseResult::UsedUp => {
                 game.inventory.remove(inv_id);
             }
+            UseResult::UsedAndKept => (),
             UseResult::Cancelled => game
                 .graphics
                 .add_status("Cancelled item use.".to_string(), 1),
@@ -55,7 +79,7 @@ pub fn use_item(inv_id: usize, game: &mut Game) -> PlayerAction {
 fn cast_heal(_inv_id: usize, game: &mut Game) -> UseResult {
     let player = &mut game.graphics.objects.borrow_mut()[PLAYER];
     if let Some(fighter) = player.fighter.as_mut() {
-        if fighter.hp == fighter.max_hp {
+        if fighter.hp == player.max_hp(&game.inventory) {
             game.graphics.statuses.push(Status::new(
                 "You are already at full health.".to_string(),
                 1,
@@ -70,6 +94,24 @@ fn cast_heal(_inv_id: usize, game: &mut Game) -> UseResult {
         return UseResult::UsedUp;
     }
     UseResult::Cancelled
+}
+
+fn toggle_equipment(inv_id: usize, game: &mut Game) -> UseResult {
+    let equipment = match game.inventory[inv_id].equipment {
+        Some(equipment) => equipment,
+        None => return UseResult::Cancelled,
+    };
+    if equipment.equipped {
+        game.inventory[inv_id].dequip(&mut game.graphics.statuses);
+    } else {
+        game.inventory[inv_id].equip(&mut game.graphics.statuses);
+    }
+
+    if let Some(current) = object::get_equipped_in_slot(equipment.slot, &game.inventory) {
+        game.inventory[current].dequip(&mut game.graphics.statuses);
+    }
+
+    UseResult::UsedAndKept
 }
 
 fn cast_lightning(_inv_id: usize, game: &mut Game) -> UseResult {
@@ -95,6 +137,16 @@ fn cast_lightning(_inv_id: usize, game: &mut Game) -> UseResult {
         game.graphics
             .add_status("No enemy is close enough.".to_string(), 1);
         UseResult::Cancelled
+    }
+}
+
+impl std::fmt::Display for Slot {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            Slot::LeftHand => write!(f, "left hand"),
+            Slot::RightHand => write!(f, "right hand"),
+            Slot::Head => write!(f, "head"),
+        }
     }
 }
 

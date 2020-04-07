@@ -92,7 +92,7 @@ impl Graphics {
         self.statuses.push(Status::new(msg, rounds));
     }
 
-    pub fn draw_player_stats(&self, player: &mut Object, level: u32) {
+    pub fn draw_player_stats(&self, player: &mut Object, level: u32, inventory: &Vec<Object>) {
         if player.alive && player.fighter.unwrap().hp > 0 {
             let hp = player.fighter.unwrap().hp;
 
@@ -108,7 +108,7 @@ impl Graphics {
                 format!(
                     "HP: {}/{}",
                     player.fighter.unwrap().hp,
-                    player.fighter.unwrap().max_hp
+                    player.max_hp(inventory)
                 ),
             );
 
@@ -130,14 +130,14 @@ impl Graphics {
             self.window.mvaddstr(
                 STATUS_Y + 1,
                 PLAYER_STATS_X,
-                format!("Defence: {}", player.fighter.unwrap().defence),
+                format!("Defence: {}", player.defence(inventory)),
             );
 
             self.window.color_set(pancurses::COLOR_CYAN);
             self.window.mvaddstr(
                 STATUS_Y + 2,
                 PLAYER_STATS_X,
-                format!("Power: {}", player.fighter.unwrap().power),
+                format!("Power: {}", player.power(inventory)),
             );
 
             self.window.color_set(pancurses::COLOR_RED);

@@ -1,5 +1,5 @@
 use crate::ai::AI;
-use crate::item::Item;
+use crate::item::{Equipment, Item, Slot};
 use crate::map_gen::Rect;
 use crate::object::{Fighter, Object};
 use crate::tile::{is_blocked, Map};
@@ -27,6 +27,11 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map, level: u32) {
             Transition { level: 1, value: 2 },
             Transition { level: 4, value: 3 },
             Transition { level: 6, value: 5 },
+            Transition { level: 8, value: 6 },
+            Transition {
+                level: 10,
+                value: 8,
+            },
         ],
         level,
     );
@@ -47,6 +52,10 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map, level: u32) {
             Transition {
                 level: 7,
                 value: 60,
+            },
+            Transition {
+                level: 10,
+                value: 90,
             },
         ],
         level,
@@ -89,6 +98,20 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map, level: u32) {
             weight: 10,
             item: Item::Confusion,
         },
+        Weighted {
+            weight: from_dungeon_level(&[Transition { level: 4, value: 5 }], level),
+            item: Item::Sword,
+        },
+        Weighted {
+            weight: from_dungeon_level(
+                &[Transition {
+                    level: 6,
+                    value: 15,
+                }],
+                level,
+            ),
+            item: Item::Shield,
+        },
     ];
 
     for _ in 0..num_monsters {
@@ -103,11 +126,11 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map, level: u32) {
                     let mut orc =
                         Object::new(x, y, 'o', pancurses::COLOR_GREEN, false, "orc", true);
                     orc.fighter = Some(Fighter {
-                        max_hp: 10,
+                        base_max_hp: 10,
                         hp: 10,
-                        defence: 0,
+                        base_defence: 0,
                         xp: 35,
-                        power: 3,
+                        base_power: 3,
                     });
                     orc.ai = Some(AI::Basic);
                     orc
@@ -116,11 +139,11 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map, level: u32) {
                     let mut troll =
                         Object::new(x, y, 'T', pancurses::COLOR_YELLOW, false, "troll", true);
                     troll.fighter = Some(Fighter {
-                        max_hp: 16,
+                        base_max_hp: 16,
                         hp: 16,
-                        defence: 1,
+                        base_defence: 1,
                         xp: 100,
-                        power: 4,
+                        base_power: 4,
                     });
                     troll.ai = Some(AI::Basic);
                     troll
@@ -197,6 +220,34 @@ pub fn spawn(room: Rect, objects: &mut Vec<Object>, map: &Map, level: u32) {
                         false,
                     );
                     object.item = Some(Item::Confusion);
+                    object
+                }
+
+                Item::Sword => {
+                    let mut object =
+                        Object::new(x, y, '/', pancurses::COLOR_BLUE, false, "sword", false);
+                    object.item = Some(Item::Sword);
+                    object.equipment = Some(Equipment {
+                        equipped: false,
+                        slot: Slot::RightHand,
+                        power_bonus: 3,
+                        defense_bonus: 0,
+                        max_hp_bonus: 0,
+                    });
+                    object
+                }
+
+                Item::Shield => {
+                    let mut object =
+                        Object::new(x, y, '[', pancurses::COLOR_BLUE, false, "shield", false);
+                    object.item = Some(Item::Shield);
+                    object.equipment = Some(Equipment {
+                        equipped: false,
+                        slot: Slot::RightHand,
+                        power_bonus: 0,
+                        defense_bonus: 1,
+                        max_hp_bonus: 10,
+                    });
                     object
                 }
             };

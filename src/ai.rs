@@ -31,7 +31,7 @@ pub fn take_turn(monster_id: usize, game: &mut Game) {
                     // close enough, attack! (if the player is still alive.)
                     let mut objs = game.graphics.objects.borrow_mut();
                     let (monster, mut player) = mut_two(monster_id, PLAYER, &mut objs);
-                    monster.attack(&mut player, &mut game.graphics.statuses)
+                    monster.attack(&mut player, &mut game.graphics.statuses, &game.inventory)
                 }
             }
         }

@@ -1,7 +1,8 @@
 use crate::ai;
 use crate::curses::{Graphics, Status, INV_X, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::item;
-use crate::object::{move_by, Fighter, Object};
+use crate::item::{Equipment, Item, Slot};
+use crate::object::{get_equipped_in_slot, move_by, Fighter, Object};
 use crate::tile;
 use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
 use pancurses::Input;
@@ -32,12 +33,23 @@ impl Game {
         player.alive = true;
 
         player.fighter = Some(Fighter {
-            max_hp: PLAYER_DEF_HP,
+            base_max_hp: PLAYER_DEF_HP,
             hp: PLAYER_DEF_HP,
-            defence: 2,
+            base_defence: 1,
             xp: 0,
-            power: 5,
+            base_power: 4,
         });
+
+        let mut dagger = Object::new(0, 0, '-', pancurses::COLOR_BLUE, false, "dagger", false);
+        dagger.item = Some(Item::Sword);
+        dagger.equipment = Some(Equipment {
+            equipped: true,
+            slot: Slot::LeftHand,
+            max_hp_bonus: 0,
+            defense_bonus: 0,
+            power_bonus: 2,
+        });
+        self.inventory.push(dagger);
 
         player.level_up_xp = LEVEL_UP_BASE + player.level * LEVEL_UP_FACTOR;
 
@@ -54,6 +66,7 @@ impl Game {
             self.graphics.draw_player_stats(
                 &mut self.graphics.objects.borrow_mut()[PLAYER],
                 self.dungeon_level,
+                &self.inventory,
             );
 
             self.show_inventory();
@@ -168,7 +181,16 @@ impl Game {
             let item = self.graphics.objects.borrow_mut().swap_remove(object_id);
             self.graphics
                 .add_status(format!("You picked up a {}!", item.name), 1);
+            let index = self.inventory.len();
+            let slot = item.equipment.map(|e| e.slot);
             self.inventory.push(item);
+
+            // automatically equip, if the corresponding equipment slot is unused
+            if let Some(slot) = slot {
+                if get_equipped_in_slot(slot, &self.inventory).is_none() {
+                    self.inventory[index].equip(&mut self.graphics.statuses);
+                }
+            }
         }
     }
 
@@ -191,7 +213,7 @@ impl Game {
                 let mut objs = self.graphics.objects.borrow_mut();
                 let (player, mut target) = ai::mut_two(PLAYER, target_id, &mut objs);
 
-                player.attack(&mut target, &mut self.graphics.statuses);
+                player.attack(&mut target, &mut self.graphics.statuses, &self.inventory);
             }
             None => {
                 move_by(
@@ -209,7 +231,7 @@ impl Game {
         self.graphics
             .add_status("You take a moment to rest.".to_string(), 1);
         let mut objs = self.graphics.objects.borrow_mut();
-        let heal_hp = objs[PLAYER].fighter.map_or(0, |f| f.max_hp / 2);
+        let heal_hp = objs[PLAYER].max_hp(&self.inventory) / 2;
         objs[PLAYER].heal(heal_hp);
         self.dungeon_level += 1;
         self.map = tile::make_map(&mut objs, self.dungeon_level);
@@ -254,6 +276,11 @@ impl Game {
                     .push(Status::new("2 - Agility (+1 defence)".to_string(), 1));
 
                 self.graphics.draw(&self.map);
+                self.graphics.draw_player_stats(
+                    &mut self.graphics.objects.borrow_mut()[PLAYER],
+                    self.dungeon_level,
+                    &self.inventory,
+                );
 
                 let player = &mut self.graphics.objects.borrow_mut()[PLAYER];
                 let fighter = player.fighter.as_mut().unwrap();
@@ -263,14 +290,14 @@ impl Game {
                         fighter.xp -= level_up_xp;
                         match choice.unwrap() {
                             Input::Character('0') => {
-                                fighter.max_hp += 20;
+                                fighter.base_max_hp += 20;
                                 fighter.hp += 20;
                             }
                             Input::Character('1') => {
-                                fighter.power += 1;
+                                fighter.base_power += 1;
                             }
                             Input::Character('2') => {
-                                fighter.defence += 1;
+                                fighter.base_defence += 1;
                             }
                             _ => unreachable!(),
                         }
@@ -288,11 +315,24 @@ impl Game {
         if self.inventory.len() > 0 {
             self.graphics.window.mvaddstr(1, INV_X, "Inventory:");
             for (i, item) in self.inventory.iter().enumerate() {
-                self.graphics.window.mvaddstr(
-                    (i + 3) as i32,
-                    INV_X,
-                    format!("{} - {}", (i + 97) as u8 as char, item.name.clone()),
-                );
+                if item.equipment.is_some() && item.equipment.unwrap().equipped {
+                    self.graphics.window.mvaddstr(
+                        (i + 3) as i32,
+                        INV_X,
+                        format!(
+                            "{} - {} (on {})",
+                            (i + 97) as u8 as char,
+                            item.name.clone(),
+                            item.equipment.unwrap().slot
+                        ),
+                    );
+                } else {
+                    self.graphics.window.mvaddstr(
+                        (i + 3) as i32,
+                        INV_X,
+                        format!("{} - {}", (i + 97) as u8 as char, item.name.clone()),
+                    );
+                }
             }
         } else {
             self.graphics
@@ -309,6 +349,7 @@ impl Game {
         self.graphics.draw_player_stats(
             &mut self.graphics.objects.borrow_mut()[PLAYER],
             self.dungeon_level,
+            &self.inventory,
         );
         match self.graphics.window.getch() {
             Some(Input::Character(c)) => match c {
@@ -342,12 +383,16 @@ impl Game {
         self.graphics.draw_player_stats(
             &mut self.graphics.objects.borrow_mut()[PLAYER],
             self.dungeon_level,
+            &self.inventory,
         );
         match self.graphics.window.getch() {
             Some(Input::Character(c)) => match c {
                 'a'..='z' => {
                     let inv_id = (c as u8 - 97) as usize;
                     if inv_id < self.inventory.len() {
+                        if self.inventory[inv_id].equipment.is_some() {
+                            self.inventory[inv_id].dequip(&mut self.graphics.statuses);
+                        }
                         self.inventory.remove(inv_id);
                     } else {
                         self.graphics
@@ -375,6 +420,7 @@ impl Game {
         self.graphics.draw_player_stats(
             &mut self.graphics.objects.borrow_mut()[PLAYER],
             self.dungeon_level,
+            &self.inventory,
         );
         match self.graphics.window.getch() {
             Some(Input::Character(c)) => match c {
