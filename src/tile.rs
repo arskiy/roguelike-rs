@@ -76,8 +76,24 @@ pub fn make_map(objects: &mut Vec<Object>) -> Map {
                 }
             }
         }
+
         rooms.push(new_room);
     }
+
+    let (last_room_x, last_room_y) =
+        rooms[rand::thread_rng().gen_range(rooms.len() - 4, rooms.len() - 2)].center();
+
+    let stairs = Object::new(
+        last_room_x,
+        last_room_y,
+        '>',
+        pancurses::COLOR_RED,
+        true,
+        "stairs",
+        false,
+    );
+
+    objects.push(stairs);
 
     map
 }

@@ -9,6 +9,7 @@ pub struct Fighter {
     pub max_hp: i32,
     pub hp: i32,
     pub defence: i32,
+    pub xp: i32,
     pub power: i32,
 }
 
@@ -25,6 +26,8 @@ pub struct Object {
     pub fighter: Option<Fighter>,
     pub ai: Option<AI>,
     pub item: Option<Item>,
+    pub level: i32,
+    pub level_up_xp: i32,
 }
 
 impl Object {
@@ -49,6 +52,8 @@ impl Object {
             fighter: None,
             ai: None,
             item: None,
+            level: 1,
+            level_up_xp: 0,
         }
     }
 
@@ -82,7 +87,7 @@ impl Object {
         ((dx.pow(2) + dy.pow(2)) as f32).sqrt()
     }
 
-    pub fn take_damage(&mut self, damage: i32, statuses: &mut Vec<Status>) {
+    pub fn take_damage(&mut self, damage: i32, statuses: &mut Vec<Status>) -> Option<i32> {
         // apply damage if possible
         if let Some(fighter) = self.fighter.as_mut() {
             if damage > 0 {
@@ -96,25 +101,26 @@ impl Object {
                 self.ch = '%';
                 self.color = pancurses::COLOR_RED;
                 self.blocks = false;
-                // self.fighter = None;
                 self.ai = None;
                 self.name = format!("remains of {}", self.name);
-                // monster_death(self, statuses);
+
+                return Some(fighter.xp);
             }
         }
+
+        None
     }
 
-    pub fn attack(&self, target: &mut Object, statuses: &mut Vec<Status>) {
-        // a simple formula for attack damage
+    pub fn attack(&mut self, target: &mut Object, statuses: &mut Vec<Status>) {
         let damage = self.fighter.map_or(0, |f| f.power) - target.fighter.map_or(0, |f| f.defence);
         if damage > 0 {
-            // make the target take some damage
             statuses.push(Status::new(
                 format!("{} attacks {} for {} hp.", self.name, target.name, damage),
                 1,
             ));
-            target.take_damage(damage, statuses);
-            target.fighter.as_mut().unwrap().hp -= damage;
+            if let Some(xp) = target.take_damage(damage, statuses) {
+                self.fighter.as_mut().unwrap().xp += xp;
+            }
         } else {
             statuses.push(Status::new(
                 format!("{} attacks {}, but has no effect.", self.name, target.name),

@@ -13,7 +13,7 @@ pub const WINDOW_HEIGHT: i32 = 40;
 pub const STATUS_Y: i32 = 32;
 pub const STATUS_HEIGHT: i32 = WINDOW_HEIGHT - STATUS_Y;
 
-pub const PLAYER_STATS_X: i32 = WINDOW_WIDTH / 2 + 1;
+pub const PLAYER_STATS_X: i32 = WINDOW_WIDTH / 4 + WINDOW_WIDTH / 2 + 1;
 
 pub const PLAYER: usize = 0;
 
@@ -69,7 +69,7 @@ impl Graphics {
         self.window.mvaddstr(STATUS_Y - 2, 1, "Message log:");
 
         for y in (STATUS_Y - 2)..WINDOW_HEIGHT {
-            self.window.mvaddch(y, WINDOW_WIDTH / 2, '|');
+            self.window.mvaddch(y, PLAYER_STATS_X - 1, '|');
         }
 
         for (i, status) in self.statuses.iter_mut().enumerate() {
@@ -92,7 +92,7 @@ impl Graphics {
         self.statuses.push(Status::new(msg, rounds));
     }
 
-    pub fn draw_player_stats(&self, player: &mut Object) {
+    pub fn draw_player_stats(&self, player: &mut Object, level: u32) {
         if player.alive && player.fighter.unwrap().hp > 0 {
             let hp = player.fighter.unwrap().hp;
 
@@ -112,18 +112,39 @@ impl Graphics {
                 ),
             );
 
-            self.window.color_set(pancurses::COLOR_YELLOW);
+            self.window.color_set(pancurses::COLOR_BLUE);
             self.window.mvaddstr(
                 STATUS_Y - 1,
+                PLAYER_STATS_X,
+                format!("Level: {}", player.level),
+            );
+
+            self.window.color_set(pancurses::COLOR_WHITE);
+            self.window.mvaddstr(
+                STATUS_Y,
+                PLAYER_STATS_X,
+                format!("XP: {}/{}", player.fighter.unwrap().xp, player.level_up_xp),
+            );
+
+            self.window.color_set(pancurses::COLOR_YELLOW);
+            self.window.mvaddstr(
+                STATUS_Y + 1,
                 PLAYER_STATS_X,
                 format!("Defence: {}", player.fighter.unwrap().defence),
             );
 
             self.window.color_set(pancurses::COLOR_CYAN);
             self.window.mvaddstr(
-                STATUS_Y,
+                STATUS_Y + 2,
                 PLAYER_STATS_X,
                 format!("Power: {}", player.fighter.unwrap().power),
+            );
+
+            self.window.color_set(pancurses::COLOR_RED);
+            self.window.mvaddstr(
+                STATUS_Y + 3,
+                PLAYER_STATS_X,
+                format!("Dungeon Level: {}", level),
             );
 
             self.window.color_set(pancurses::COLOR_WHITE);
@@ -160,7 +181,7 @@ impl Graphics {
         self.window.mvaddch(WINDOW_HEIGHT, 0, '+');
         self.window.mvaddch(0, WINDOW_WIDTH, '+');
         self.window.mvaddch(0, SCR_WIDTH, '+');
-        self.window.mvaddch(WINDOW_HEIGHT, WINDOW_WIDTH / 2, '+');
+        self.window.mvaddch(WINDOW_HEIGHT, PLAYER_STATS_X - 1, '+');
         self.window.mvaddch(WINDOW_HEIGHT, WINDOW_WIDTH, '+');
         self.window.mvaddch(WINDOW_HEIGHT, SCR_WIDTH, '+');
     }

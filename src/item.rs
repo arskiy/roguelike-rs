@@ -73,7 +73,7 @@ fn cast_heal(_inv_id: usize, game: &mut Game) -> UseResult {
 }
 
 fn cast_lightning(_inv_id: usize, game: &mut Game) -> UseResult {
-    let monster_id = closest_monster(&game.graphics.objects.borrow(), LIGHTNING_RANGE);
+    let monster_id = closest_monster(&game.graphics.objects.borrow().clone(), LIGHTNING_RANGE);
     if let Some(monster_id) = monster_id {
         game.graphics.add_status(
             format!(
@@ -83,8 +83,13 @@ fn cast_lightning(_inv_id: usize, game: &mut Game) -> UseResult {
             ),
             1,
         );
-        game.graphics.objects.borrow_mut()[monster_id]
-            .take_damage(LIGHTNING_DAMAGE, &mut game.graphics.statuses);
+
+        let objs = &mut game.graphics.objects.borrow_mut();
+        if let Some(xp) =
+            objs[monster_id].take_damage(LIGHTNING_DAMAGE, &mut game.graphics.statuses)
+        {
+            objs[PLAYER].fighter.as_mut().unwrap().xp += xp;
+        };
         UseResult::UsedUp
     } else {
         game.graphics
@@ -130,8 +135,10 @@ fn cast_fire(_inv_id: usize, game: &mut Game) -> UseResult {
     );
 
     let player = game.graphics.objects.borrow()[PLAYER].clone();
+    let mut xp_to_gain = 0;
 
-    for obj in game.graphics.objects.borrow_mut().iter_mut() {
+    let mut objs = game.graphics.objects.borrow_mut();
+    for obj in objs.iter_mut() {
         if obj.distance_to(&player) <= FIRE_RADIUS as f32 && obj.fighter.is_some() {
             if obj.name == "player" {
                 game.graphics.statuses.push(Status::new(
@@ -147,10 +154,15 @@ fn cast_fire(_inv_id: usize, game: &mut Game) -> UseResult {
                     ),
                     1,
                 ));
-                obj.take_damage(FIRE_DAMAGE, &mut game.graphics.statuses);
+                if let Some(xp) = obj.take_damage(FIRE_DAMAGE, &mut game.graphics.statuses) {
+                    xp_to_gain += xp;
+                }
             }
         }
     }
+
+    objs[PLAYER].fighter.as_mut().unwrap().xp += xp_to_gain;
+
     UseResult::UsedUp
 }
 

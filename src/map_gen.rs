@@ -40,8 +40,8 @@ impl Rect {
 
 pub fn create_room(room: Rect, map: &mut Map) {
     // go through the tiles in the rectangle and make them passable
-    for x in (room.x1 + 1)..room.x2 {
-        for y in (room.y1 + 1)..room.y2 {
+    for x in room.x1..room.x2 {
+        for y in room.y1..room.y2 {
             map[x as usize][y as usize] = Tile::empty();
         }
     }

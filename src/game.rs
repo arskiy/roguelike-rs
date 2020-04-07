@@ -1,5 +1,5 @@
 use crate::ai;
-use crate::curses::{Graphics, INV_X, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::curses::{Graphics, Status, INV_X, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
 use crate::item;
 use crate::object::{move_by, Fighter, Object};
 use crate::tile;
@@ -7,11 +7,14 @@ use crate::tile::{Map, Tile, MAP_HEIGHT, MAP_WIDTH};
 use pancurses::Input;
 
 const PLAYER_DEF_HP: i32 = 40;
+const LEVEL_UP_BASE: i32 = 200;
+const LEVEL_UP_FACTOR: i32 = 150;
 
 pub struct Game {
     pub map: Map,
     pub graphics: Graphics,
     pub inventory: Vec<Object>,
+    pub dungeon_level: u32,
 }
 
 impl Game {
@@ -32,8 +35,11 @@ impl Game {
             max_hp: PLAYER_DEF_HP,
             hp: PLAYER_DEF_HP,
             defence: 2,
+            xp: 0,
             power: 5,
         });
+
+        player.level_up_xp = LEVEL_UP_BASE + player.level * LEVEL_UP_FACTOR;
 
         self.graphics.push_obj(player);
 
@@ -45,10 +51,14 @@ impl Game {
 
             self.graphics.draw(&self.map);
 
-            self.graphics
-                .draw_player_stats(&mut self.graphics.objects.borrow_mut()[PLAYER]);
+            self.graphics.draw_player_stats(
+                &mut self.graphics.objects.borrow_mut()[PLAYER],
+                self.dungeon_level,
+            );
 
             self.show_inventory();
+
+            self.level_up();
 
             let player_action = self.handle_keys();
 
@@ -59,18 +69,6 @@ impl Game {
             if self.graphics.objects.borrow()[PLAYER].alive
                 && player_action != PlayerAction::DidntTakeTurn
             {
-                for object in &*self.graphics.objects.borrow() {
-                    // only if object is not player
-                    if (object as *const _) != (&self.graphics.objects.borrow()[PLAYER] as *const _)
-                    {
-                        /*
-                        self.graphics
-                            .statuses
-                            .push(Status::new(format!("The {} growls!", object.name), 1));
-                        */
-                    }
-                }
-
                 let m = self.graphics.objects.borrow().len();
                 for id in 0..m {
                     if self.graphics.objects.borrow()[id].ai.is_some() {
@@ -119,7 +117,20 @@ impl Game {
             (Some(Input::Character('a')), true) => self.apply_item(),
 
             (Some(Input::Character('d')), true) => self.drop_item(),
-            (Some(Input::Character('D')), true) => self.drop_item_by_type(),
+
+            // (Some(Input::Character('D')), true) => self.drop_item_by_type(),
+            (Some(Input::Character('>')), true) => {
+                let player_on_stairs = self.graphics.objects.borrow().iter().any(|object| {
+                    object.pos() == self.graphics.objects.borrow()[PLAYER].pos()
+                        && object.name == "stairs"
+                });
+
+                if player_on_stairs {
+                    self.next_level();
+                }
+
+                PlayerAction::DidntTakeTurn
+            }
 
             // movement keys
             (Some(Input::KeyUp), true) | (Some(Input::Character('k')), true) => {
@@ -194,6 +205,82 @@ impl Game {
         }
     }
 
+    fn next_level(&mut self) {
+        self.graphics
+            .add_status("You take a moment to rest.".to_string(), 1);
+        let mut objs = self.graphics.objects.borrow_mut();
+        let heal_hp = objs[PLAYER].fighter.map_or(0, |f| f.max_hp / 2);
+        objs[PLAYER].heal(heal_hp);
+        self.dungeon_level += 1;
+        self.map = tile::make_map(&mut objs);
+    }
+
+    fn level_up(&mut self) {
+        let level_up_xp =
+            LEVEL_UP_BASE + self.graphics.objects.borrow()[PLAYER].level * LEVEL_UP_FACTOR;
+        // see if the player's experience is enough to level-up
+        if self.graphics.objects.borrow()[PLAYER].fighter.unwrap().xp >= level_up_xp {
+            // it is! level up
+            {
+                let player = &mut self.graphics.objects.borrow_mut()[PLAYER];
+
+                player.level += 1;
+                player.level_up_xp = level_up_xp;
+                self.graphics.statuses.push(Status::new(
+                    format!(
+                        "Your battle skills grow stronger! You reached level {}!",
+                        player.level
+                    ),
+                    1,
+                ));
+            }
+
+            let mut choice = None;
+
+            while choice.is_none() {
+                // keep asking until a choice is made
+                self.graphics.statuses.push(Status::new(
+                    "Level up! Choose a stat to raise:".to_string(),
+                    1,
+                ));
+                self.graphics
+                    .statuses
+                    .push(Status::new("0 - Constitution (+20 HP)".to_string(), 1));
+                self.graphics
+                    .statuses
+                    .push(Status::new("1 - Strength (+1 power)".to_string(), 1));
+                self.graphics
+                    .statuses
+                    .push(Status::new("2 - Agility (+1 defence)".to_string(), 1));
+
+                self.graphics.draw(&self.map);
+
+                let player = &mut self.graphics.objects.borrow_mut()[PLAYER];
+                let fighter = player.fighter.as_mut().unwrap();
+                choice = self.graphics.window.getch();
+                match choice {
+                    Some(Input::Character('0'..='2')) => {
+                        fighter.xp -= level_up_xp;
+                        match choice.unwrap() {
+                            Input::Character('0') => {
+                                fighter.max_hp += 20;
+                                fighter.hp += 20;
+                            }
+                            Input::Character('1') => {
+                                fighter.power += 1;
+                            }
+                            Input::Character('2') => {
+                                fighter.defence += 1;
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+                    _ => choice = None,
+                }
+            }
+        }
+    }
+
     // ------------------------------------
     // inventory-related methods
     fn show_inventory(&self) {
@@ -219,8 +306,10 @@ impl Game {
             .add_status("PRESS A KEY TO USE AN ITEM:".to_string(), 1);
         self.graphics.draw(&self.map);
         self.show_inventory();
-        self.graphics
-            .draw_player_stats(&mut self.graphics.objects.borrow_mut()[PLAYER]);
+        self.graphics.draw_player_stats(
+            &mut self.graphics.objects.borrow_mut()[PLAYER],
+            self.dungeon_level,
+        );
         match self.graphics.window.getch() {
             Some(Input::Character(c)) => match c {
                 'a'..='z' => {
@@ -246,10 +335,73 @@ impl Game {
     }
 
     fn drop_item(&mut self) -> PlayerAction {
+        self.graphics
+            .add_status("PRESS A KEY TO DROP AN ITEM:".to_string(), 1);
+        self.graphics.draw(&self.map);
+        self.show_inventory();
+        self.graphics.draw_player_stats(
+            &mut self.graphics.objects.borrow_mut()[PLAYER],
+            self.dungeon_level,
+        );
+        match self.graphics.window.getch() {
+            Some(Input::Character(c)) => match c {
+                'a'..='z' => {
+                    let inv_id = (c as u8 - 97) as usize;
+                    if inv_id < self.inventory.len() {
+                        self.inventory.remove(inv_id);
+                    } else {
+                        self.graphics
+                            .add_status(format!("You don't have an item at {}.", c), 1);
+                    }
+                }
+                _ => self
+                    .graphics
+                    .add_status("Please press a key from a to z.".to_string(), 1),
+            },
+
+            Some(Input::KeyDC) => self.graphics.add_status("Cancelled.".to_string(), 1),
+            _ => self
+                .graphics
+                .add_status("Please press a key from a to z.".to_string(), 1),
+        }
         PlayerAction::DidntTakeTurn
     }
 
     fn drop_item_by_type(&mut self) -> PlayerAction {
+        self.graphics
+            .add_status("PRESS A KEY TO DROP AN ITEM BY TYPE:".to_string(), 1);
+        self.graphics.draw(&self.map);
+        self.show_inventory();
+        self.graphics.draw_player_stats(
+            &mut self.graphics.objects.borrow_mut()[PLAYER],
+            self.dungeon_level,
+        );
+        match self.graphics.window.getch() {
+            Some(Input::Character(c)) => match c {
+                'a'..='z' => {
+                    let inv_id = (c as u8 - 97) as usize;
+                    if inv_id < self.inventory.len() {
+                        let item = self.inventory[inv_id].item;
+                        for (i, it) in self.inventory.clone().iter().enumerate() {
+                            if it.item == item {
+                                self.inventory.remove(i);
+                            }
+                        }
+                    } else {
+                        self.graphics
+                            .add_status(format!("You don't have an item at {}.", c), 1);
+                    }
+                }
+                _ => self
+                    .graphics
+                    .add_status("Please press a key from a to z.".to_string(), 1),
+            },
+
+            Some(Input::KeyDC) => self.graphics.add_status("Cancelled.".to_string(), 1),
+            _ => self
+                .graphics
+                .add_status("Please press a key from a to z.".to_string(), 1),
+        }
         PlayerAction::DidntTakeTurn
     }
 }
@@ -260,6 +412,7 @@ impl Default for Game {
             map: vec![vec![Tile::empty(); MAP_HEIGHT as usize]; MAP_WIDTH as usize],
             graphics: Graphics::default(),
             inventory: vec![],
+            dungeon_level: 1,
         }
     }
 }
