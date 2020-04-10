@@ -1,8 +1,4 @@
-use crate::curses::Status;
-use crate::object::Object;
-use crate::tile::{Map, MAP_HEIGHT, MAP_WIDTH};
-
-const RAY_MAX_DIST: i32 = 10;
+use crate::tile::Map;
 
 #[derive(Debug)]
 pub struct Point {
@@ -27,7 +23,7 @@ fn line(x1: i32, y1: i32, x2: i32, y2: i32, map: &Map) -> Vec<Point> {
     loop {
         coordinates.push(Point { x: x1, y: y1 });
 
-        if x1 == x2 && y1 == y2 && !map[x1 as usize][y1 as usize].block_sight {
+        if x1 == x2 && y1 == y2 || map[x1 as usize][y1 as usize].block_sight {
             break;
         }
 
@@ -47,28 +43,24 @@ fn line(x1: i32, y1: i32, x2: i32, y2: i32, map: &Map) -> Vec<Point> {
     coordinates
 }
 
-pub fn raycast_on_map(map: &mut Map, px: i32, py: i32, statuses: &mut Vec<Status>) {
+pub fn raycast_on_map(map: &mut Map, px: i32, py: i32, points: &Vec<Point>) {
     let mut coords: Vec<Vec<Point>> = vec![];
 
-    coords.push(line(px, py, px + 8, py, &map));
-    coords.push(line(px, py, px - 8, py, &map));
-
-    coords.push(line(px, py, px, py + 8, &map));
-    coords.push(line(px, py, px, py - 8, &map));
+    for point in points {
+        coords.push(line(px, py, point.x, point.y, &map));
+    }
 
     // reset map visibility
-    /*
-    for i in 0..map.len() {
-        for j in 0..map[i].len() {
-            map[i][j].visible = false;
+    for elem in map.iter_mut() {
+        for j in elem.iter_mut() {
+            j.currently_visible = false;
         }
-    }*/
+    }
 
-    // statuses.push(Status::new(format!("coords: {:?}\n", coords), 1));
     for i in coords.iter() {
         for point in i.iter() {
-            // statuses.push(Status::new(format!("x: {}, y: {}", point.x, point.y), 1));
             map[point.x as usize][point.y as usize].visible = true;
+            map[point.x as usize][point.y as usize].currently_visible = true;
         }
     }
 }

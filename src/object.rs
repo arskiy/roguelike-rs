@@ -1,6 +1,5 @@
 use crate::ai::AI;
 use crate::curses::Status;
-use crate::game::Game;
 use crate::item::{Equipment, Item, Slot};
 use crate::tile::{is_blocked, Map};
 use pancurses::A_BOLD;

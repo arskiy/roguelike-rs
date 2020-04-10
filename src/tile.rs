@@ -12,6 +12,7 @@ pub struct Tile {
     pub blocked: bool,
     pub block_sight: bool,
     pub visible: bool,
+    pub currently_visible: bool,
 }
 
 impl Tile {
@@ -20,6 +21,7 @@ impl Tile {
             blocked: false,
             block_sight: false,
             visible: false,
+            currently_visible: false,
         }
     }
 
@@ -28,6 +30,7 @@ impl Tile {
             blocked: true,
             block_sight: true,
             visible: false,
+            currently_visible: false,
         }
     }
 }

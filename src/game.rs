@@ -79,17 +79,10 @@ impl Game {
                 self.graphics.add_status(names, 1)
             };
 
-            /*
             {
                 let player = &self.graphics.objects.borrow()[PLAYER];
-                fov::raycast_on_map(
-                    &mut self.map,
-                    player.x,
-                    player.y,
-                    &mut self.graphics.statuses,
-                );
+                fov::raycast_on_map(&mut self.map, player.x, player.y, &points);
             }
-             */
 
             self.graphics.draw(&self.map);
 
@@ -342,7 +335,7 @@ impl Game {
     // inventory-related methods
     fn show_inventory(&self) {
         self.graphics.window.color_set(pancurses::COLOR_WHITE);
-        if self.inventory.len() > 0 {
+        if !self.inventory.is_empty() {
             self.graphics.window.mvaddstr(1, INV_X, "Inventory:");
             for (i, item) in self.inventory.iter().enumerate() {
                 if item.equipment.is_some() && item.equipment.unwrap().equipped {
@@ -424,45 +417,6 @@ impl Game {
                             self.inventory[inv_id].dequip(&mut self.graphics.statuses);
                         }
                         self.inventory.remove(inv_id);
-                    } else {
-                        self.graphics
-                            .add_status(format!("You don't have an item at {}.", c), 1);
-                    }
-                }
-                _ => self
-                    .graphics
-                    .add_status("Please press a key from a to z.".to_string(), 1),
-            },
-
-            Some(Input::KeyDC) => self.graphics.add_status("Cancelled.".to_string(), 1),
-            _ => self
-                .graphics
-                .add_status("Please press a key from a to z.".to_string(), 1),
-        }
-        PlayerAction::DidntTakeTurn
-    }
-
-    fn drop_item_by_type(&mut self) -> PlayerAction {
-        self.graphics
-            .add_status("PRESS A KEY TO DROP AN ITEM BY TYPE:".to_string(), 1);
-        self.graphics.draw(&self.map);
-        self.show_inventory();
-        self.graphics.draw_player_stats(
-            &mut self.graphics.objects.borrow_mut()[PLAYER],
-            self.dungeon_level,
-            &self.inventory,
-        );
-        match self.graphics.window.getch() {
-            Some(Input::Character(c)) => match c {
-                'a'..='z' => {
-                    let inv_id = (c as u8 - 97) as usize;
-                    if inv_id < self.inventory.len() {
-                        let item = self.inventory[inv_id].item;
-                        for (i, it) in self.inventory.clone().iter().enumerate() {
-                            if it.item == item {
-                                self.inventory.remove(i);
-                            }
-                        }
                     } else {
                         self.graphics
                             .add_status(format!("You don't have an item at {}.", c), 1);

@@ -42,26 +42,11 @@ impl Graphics {
 
         self.draw_borders();
 
-        for obj in &*self.objects.borrow() {
-            obj.draw(&self.window);
-        }
-
-        // draw alive objects with priority
-        let _ = self
-            .objects
-            .borrow()
-            .iter()
-            .filter(|obj| obj.alive)
-            .map(|obj| obj.draw(&self.window));
-
-        // draw player with priority
-        self.objects.borrow()[PLAYER].draw(&self.window);
-
         for y in 0..MAP_HEIGHT {
             for x in 0..MAP_WIDTH {
-                let wall = map[x as usize][y as usize].block_sight;
-                if wall {
-                    if map[x as usize][y as usize].visible {
+                if map[x as usize][y as usize].visible {
+                    let wall = map[x as usize][y as usize].block_sight;
+                    if wall {
                         self.window.mvaddch(y, x, '+');
                     } else {
                         self.window.mvaddch(y, x, '.');
@@ -69,6 +54,23 @@ impl Graphics {
                 }
             }
         }
+
+        for obj in &*self.objects.borrow() {
+            if map[obj.x as usize][obj.y as usize].currently_visible {
+                obj.draw(&self.window);
+            }
+        }
+
+        // draw alive objects with priority
+        let _ = self
+            .objects
+            .borrow()
+            .iter()
+            .filter(|obj| obj.alive && map[obj.x as usize][obj.y as usize].currently_visible)
+            .map(|obj| obj.draw(&self.window));
+
+        // draw player with priority
+        self.objects.borrow()[PLAYER].draw(&self.window);
 
         self.window.mvaddstr(STATUS_Y - 2, 1, "Message log:");
 
@@ -173,6 +175,9 @@ impl Graphics {
         for i in 0..SCR_WIDTH {
             self.window.mvaddch(0, i, '-');
             self.window.mvaddch(WINDOW_HEIGHT, i, '-');
+        }
+        for i in 0..INV_X - 1 {
+            self.window.mvaddch(STATUS_Y - 3, i, '-');
         }
 
         for i in 0..WINDOW_HEIGHT {
