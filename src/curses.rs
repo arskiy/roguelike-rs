@@ -61,7 +61,11 @@ impl Graphics {
             for x in 0..MAP_WIDTH {
                 let wall = map[x as usize][y as usize].block_sight;
                 if wall {
-                    self.window.mvaddch(y, x, '+');
+                    if map[x as usize][y as usize].visible {
+                        self.window.mvaddch(y, x, '+');
+                    } else {
+                        self.window.mvaddch(y, x, '.');
+                    }
                 }
             }
         }

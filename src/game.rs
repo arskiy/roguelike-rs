@@ -1,5 +1,6 @@
 use crate::ai;
 use crate::curses::{Graphics, Status, INV_X, PLAYER, WINDOW_HEIGHT, WINDOW_WIDTH};
+use crate::fov;
 use crate::item;
 use crate::item::{Equipment, Item, Slot};
 use crate::object::{get_equipped_in_slot, move_by, Fighter, Object};
@@ -58,8 +59,37 @@ impl Game {
         // procedurally generate the map
         self.map = tile::make_map(&mut self.graphics.objects.borrow_mut(), self.dungeon_level);
 
+        let mut points = vec![];
+        for i in 0..MAP_WIDTH {
+            points.push(fov::Point { x: i, y: 0 });
+            points.push(fov::Point {
+                x: i,
+                y: MAP_HEIGHT,
+            });
+        }
+
+        for i in 0..MAP_HEIGHT {
+            points.push(fov::Point { x: 0, y: i });
+            points.push(fov::Point { x: MAP_WIDTH, y: i });
+        }
+
         loop {
-            self.graphics.add_status(self.get_names_under_player(), 1);
+            let names = self.get_names_under_player();
+            if !names.is_empty() {
+                self.graphics.add_status(names, 1)
+            };
+
+            /*
+            {
+                let player = &self.graphics.objects.borrow()[PLAYER];
+                fov::raycast_on_map(
+                    &mut self.map,
+                    player.x,
+                    player.y,
+                    &mut self.graphics.statuses,
+                );
+            }
+             */
 
             self.graphics.draw(&self.map);
 

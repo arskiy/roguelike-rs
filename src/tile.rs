@@ -11,6 +11,7 @@ pub const MAP_HEIGHT: i32 = 30;
 pub struct Tile {
     pub blocked: bool,
     pub block_sight: bool,
+    pub visible: bool,
 }
 
 impl Tile {
@@ -18,6 +19,7 @@ impl Tile {
         Tile {
             blocked: false,
             block_sight: false,
+            visible: false,
         }
     }
 
@@ -25,6 +27,7 @@ impl Tile {
         Tile {
             blocked: true,
             block_sight: true,
+            visible: false,
         }
     }
 }
@@ -88,7 +91,7 @@ pub fn make_map(objects: &mut Vec<Object>, level: u32) -> Map {
 
         if last_room_x > MAP_WIDTH || last_room_x < 0 || last_room_y < 0 || last_room_y > MAP_HEIGHT
         {
-            let (x, y) = rooms[rooms.len() - 1].center();
+            let (x, y) = rooms[rooms.len() - rand::thread_rng().gen_range(1, 4)].center();
             last_room_x = x;
             last_room_y = y;
         }

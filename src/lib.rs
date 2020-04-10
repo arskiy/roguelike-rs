@@ -5,6 +5,7 @@ extern crate rand;
 
 pub mod ai;
 pub mod curses;
+pub mod fov;
 pub mod game;
 pub mod item;
 pub mod map_gen;
