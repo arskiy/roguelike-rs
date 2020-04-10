@@ -35,6 +35,7 @@ appear, causing unfinishable levels.
 
 ## Inspiration:
 https://sites.google.com/site/jicenospam/visibilitydetermination
+
 https://tomassedovic.github.io/roguelike-tutorial/index.html
 
 Thank you for your time and patience!
