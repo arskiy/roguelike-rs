@@ -2,18 +2,26 @@
 
 A nethack-inspired curses-based roguelike.
 
-<img src="https://imgur.com/j3Fvc0u" align="center" />
+<img src="https://imgur.com/j3Fvc0u.png" align="center" />
 How the game looks like.
 
 ## Controls
 The same as nethack, except for exiting.
+
 `q` quits
+
 `,` picks item up
+
 `.` waits
+
 `a` applies (uses) an item
+
 `d` drops an item
+
 `>` uses the stairs
+
 `012` chooses level up bonus
+
 `hjkl`/arrow keys moves you around
 
 ## Supported platforms
